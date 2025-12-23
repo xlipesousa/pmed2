@@ -1,66 +1,276 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🏥 PMED 2.0
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistema de Gestão e Controle de Faturas Hospitalares
 
-## About Laravel
+[![Laravel](https://img.shields.io/badge/Laravel-12.8.1-red?logo=laravel)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.2+-blue?logo=php)](https://php.net)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📋 Sobre o Projeto
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+O **PMED 2.0** é um sistema completo para gestão de faturas hospitalares de convênios médicos. Gerencia todo o fluxo de pacotes de faturas desde a entrada no protocolo até o arquivamento final, incluindo processos de glosas, recursos e pagamentos.
 
-## Learning Laravel
+### ✨ Principais Funcionalidades
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- 📦 **Gestão Completa de Pacotes** - CRUD, movimentações, glosas, anulações
+- 💰 **Mapas de Pagamento** - Criação, gestão e exportação
+- 📊 **Relatórios Gerenciais** - Status, performance, glosas, financeiro
+- 🔍 **Pesquisa Avançada** - Multicritério com exportação (PDF, Excel)
+- 📈 **Dashboards e Gráficos** - KPIs, tendências e análises
+- ⚙️ **Configurações** - OCS/PSA, tipos, usuários
+- 🔐 **Controle de Acesso** - 8 perfis diferentes com permissões granulares
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🚀 Início Rápido
 
-## Laravel Sponsors
+### Pré-requisitos
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- PHP 8.2+
+- MySQL 8.0+ ou MariaDB 10.6+
+- Node.js 18+
+- Composer 2.6+
 
-### Premium Partners
+### Instalação Automatizada
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```bash
+# Clone o repositório
+git clone https://github.com/xlipesousa/pmed2.git
+cd pmed2
 
-## Contributing
+# Execute o script de instalação (requer sudo)
+sudo ./install.sh
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+O script `install.sh` irá:
+- ✅ Instalar todas as dependências do sistema
+- ✅ Configurar PHP, MySQL e Nginx
+- ✅ Instalar dependências do Composer e NPM
+- ✅ Configurar banco de dados
+- ✅ Executar migrations
+- ✅ Compilar assets
+- ✅ Configurar permissões
 
-## Code of Conduct
+### Instalação Manual
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+# 1. Clone e entre no diretório
+git clone https://github.com/xlipesousa/pmed2.git
+cd pmed2
 
-## Security Vulnerabilities
+# 2. Instale dependências
+composer install
+npm install
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# 3. Configure o ambiente
+cp .env.example .env
+php artisan key:generate
 
-## License
+# 4. Configure o banco de dados no .env
+# DB_DATABASE=pmed2
+# DB_USERNAME=seu_usuario
+# DB_PASSWORD=sua_senha
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# 5. Execute migrations
+php artisan migrate
+
+# 6. Compile assets
+npm run build
+
+# 7. Configure permissões
+chmod -R 775 storage bootstrap/cache
+```
+
+---
+
+## 📖 Documentação
+
+- 📄 **[Relatório Completo do Sistema](relatorio.md)** - Documentação técnica detalhada
+- 🔧 **[Requisitos e Dependências](requirements.txt)** - Lista completa de software necessário
+- 🛠️ **[Script de Instalação](install.sh)** - Instalação automatizada
+- 🔄 **[Script de Atualização](update.sh)** - Atualização do sistema
+
+---
+
+## 🏗️ Stack Tecnológica
+
+### Backend
+- **Framework:** Laravel 12.8.1
+- **PHP:** 8.2+
+- **Banco de Dados:** MySQL 8.0+ / MariaDB 10.6+
+- **Template Admin:** AdminLTE 3.15
+
+### Frontend
+- **Template Engine:** Blade
+- **CSS:** Bootstrap 5.2.3 + Tailwind CSS 4.0
+- **Build Tool:** Vite 6.2.4
+- **JavaScript:** Axios 1.8.2
+
+### Bibliotecas Principais
+- `barryvdh/laravel-dompdf` - Geração de PDFs
+- `intervention/image` - Processamento de imagens
+- `doctrine/dbal` - Manipulação de schemas
+- `laravel/sanctum` - Autenticação API
+
+---
+
+## 📊 Estatísticas do Sistema
+
+- **999** Pacotes gerenciados
+- **26** Usuários ativos
+- **22** Tabelas no banco de dados
+- **8** Perfis de usuário
+- **60+** Rotas implementadas
+- **8** Controllers principais
+
+---
+
+## 🔐 Perfis de Usuário
+
+| Perfil | Descrição |
+|--------|-----------|
+| **Admin** | Acesso total ao sistema |
+| **Auditor** | Visualização sem modificação |
+| **Protocolo** | Entrada de pacotes |
+| **Lisura** | Análise e glosas |
+| **SIRE** | Autorização de pagamentos |
+| **Glosa** | Gestão de recursos |
+| **Arquivo** | Arquivamento |
+| **Pagamento** | Mapas de pagamento |
+
+---
+
+## 🔄 Fluxo Operacional
+
+```
+Protocolo → Lisura → SIRE → Glosa → Arquivo → Arquivado
+```
+
+---
+
+## 🛠️ Comandos Úteis
+
+### Desenvolvimento
+```bash
+# Iniciar servidor de desenvolvimento
+php artisan serve
+
+# Compilar assets em modo watch
+npm run dev
+
+# Executar migrations
+php artisan migrate
+
+# Limpar caches
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+```
+
+### Produção
+```bash
+# Compilar assets para produção
+npm run build
+
+# Otimizar caches
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Modo manutenção
+php artisan down
+php artisan up
+```
+
+### Atualização
+```bash
+# Atualizar do repositório
+./update.sh
+```
+
+---
+
+## 📁 Estrutura de Diretórios
+
+```
+pmed2/
+├── app/
+│   ├── Http/Controllers/    # Controllers
+│   ├── Models/              # Models Eloquent
+│   ├── Helpers/             # Helpers customizados
+│   └── Providers/           # Service Providers
+├── database/
+│   ├── migrations/          # Migrations do banco
+│   └── seeders/            # Seeders
+├── resources/
+│   ├── views/              # Views Blade
+│   ├── js/                 # JavaScript
+│   └── sass/               # Estilos
+├── routes/
+│   └── web.php            # Rotas web
+├── public/                # Assets públicos
+├── storage/               # Storage e logs
+├── install.sh            # Script de instalação
+├── update.sh             # Script de atualização
+├── requirements.txt      # Dependências
+└── relatorio.md         # Documentação completa
+```
+
+---
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Por favor:
+
+1. Faça um Fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
+3. Commit suas mudanças (`git commit -m 'feat: Adiciona MinhaFeature'`)
+4. Push para a branch (`git push origin feature/MinhaFeature`)
+5. Abra um Pull Request
+
+### Padrão de Commits
+
+Seguimos o [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `feat:` Nova funcionalidade
+- `fix:` Correção de bug
+- `docs:` Documentação
+- `style:` Formatação
+- `refactor:` Refatoração
+- `test:` Testes
+- `chore:` Manutenção
+
+---
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+---
+
+## 👤 Autor
+
+**Felipe Pedrosa**
+
+- GitHub: [@xlipesousa](https://github.com/xlipesousa)
+- Email: xlipesousa@gmail.com
+
+---
+
+## 🙏 Agradecimentos
+
+- Laravel Framework
+- AdminLTE
+- Comunidade Open Source
+
+---
+
+## 📞 Suporte
+
+Para reportar bugs ou solicitar features, por favor abra uma [issue](https://github.com/xlipesousa/pmed2/issues).
+
+---
+
+**⭐ Se este projeto foi útil para você, considere dar uma estrela!**
