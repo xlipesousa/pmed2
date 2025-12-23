@@ -1,0 +1,184 @@
+# PMED2 - Sistema de Gestão de Faturas Hospitalares
+# Requirements - Dependências e Requisitos do Sistema
+# Atualizado em: 23/12/2025
+
+# ============================================
+# REQUISITOS DE SISTEMA OPERACIONAL
+# ============================================
+# Sistema Operacional: Linux (Ubuntu 20.04+ / Debian 11+ recomendado)
+# Arquitetura: x86_64
+
+# ============================================
+# SOFTWARE BASE REQUERIDO
+# ============================================
+
+## Servidor Web
+# Nginx 1.18+ ou Apache 2.4+
+nginx>=1.18
+
+## PHP
+# PHP 8.2 ou superior (OBRIGATÓRIO)
+php>=8.2
+php-fpm>=8.2
+php-cli>=8.2
+
+## Extensões PHP Requeridas
+php-mysql>=8.2
+php-mbstring>=8.2
+php-xml>=8.2
+php-bcmath>=8.2
+php-curl>=8.2
+php-gd>=8.2
+php-zip>=8.2
+php-intl>=8.2
+php-json>=8.2
+php-tokenizer>=8.2
+php-fileinfo>=8.2
+php-dom>=8.2
+php-simplexml>=8.2
+php-xmlwriter>=8.2
+
+## Banco de Dados
+# MySQL 8.0+ ou MariaDB 10.6+
+mysql-server>=8.0
+# OU
+# mariadb-server>=10.6
+
+mysql-client>=8.0
+
+## Node.js e NPM
+# Node.js 18.x ou superior (LTS recomendado)
+nodejs>=18.0
+npm>=9.0
+
+## Composer
+# Gerenciador de dependências PHP
+composer>=2.6
+
+## Git
+git>=2.25
+
+## Utilitários do Sistema
+curl>=7.68
+wget>=1.20
+unzip>=6.0
+zip>=3.0
+
+# ============================================
+# DEPENDÊNCIAS PHP (Composer)
+# ============================================
+# Instaladas via composer.json, listadas para referência:
+
+## Laravel Framework
+# laravel/framework: ^12.0
+
+## Pacotes Principais
+# barryvdh/laravel-dompdf: ^3.1 (Geração de PDFs)
+# doctrine/dbal: ^4.2 (Manipulação de schema)
+# intervention/image: ^3.11 (Processamento de imagens)
+# jeroennoten/laravel-adminlte: ^3.15 (Template AdminLTE)
+# laravel/sanctum: ^4.0 (API Authentication)
+# laravel/tinker: ^2.10.1 (REPL do Laravel)
+# laravel/ui: ^4.6 (UI Scaffolding)
+
+## Pacotes de Desenvolvimento
+# fakerphp/faker: ^1.23
+# laravel/pail: ^1.2.2
+# laravel/pint: ^1.13
+# laravel/sail: ^1.41
+# mockery/mockery: ^1.6
+# nunomaduro/collision: ^8.6
+# phpunit/phpunit: ^11.5.3
+
+# ============================================
+# DEPENDÊNCIAS FRONTEND (NPM)
+# ============================================
+# Instaladas via package.json, listadas para referência:
+
+## Build Tools
+# vite: ^6.2.4
+# laravel-vite-plugin: ^1.2.0
+
+## Frameworks CSS
+# bootstrap: ^5.2.3
+# tailwindcss: ^4.0.0
+# @tailwindcss/vite: ^4.0.0
+
+## Bibliotecas JavaScript
+# axios: ^1.8.2
+# @popperjs/core: ^2.11.6
+
+## Pré-processadores
+# sass: ^1.56.1
+
+## Utilitários
+# concurrently: ^9.0.1
+
+# ============================================
+# REQUISITOS DE MEMÓRIA E PROCESSAMENTO
+# ============================================
+# RAM Mínima: 2GB
+# RAM Recomendada: 4GB ou superior
+# Espaço em Disco: 5GB mínimo
+# CPU: 2 cores recomendado
+
+# ============================================
+# PORTAS UTILIZADAS
+# ============================================
+# 80 - HTTP (Nginx/Apache)
+# 443 - HTTPS (Nginx/Apache - Opcional)
+# 3306 - MySQL/MariaDB
+# 5173 - Vite Dev Server (Desenvolvimento)
+# 8000 - Laravel Artisan Serve (Desenvolvimento)
+
+# ============================================
+# PERMISSÕES NECESSÁRIAS
+# ============================================
+# Usuário web server (www-data ou nginx) precisa permissão de escrita em:
+# - storage/
+# - bootstrap/cache/
+# - public/
+
+# ============================================
+# VARIÁVEIS DE AMBIENTE NECESSÁRIAS
+# ============================================
+# Copiar .env.example para .env e configurar:
+# - APP_KEY (gerar com: php artisan key:generate)
+# - DB_CONNECTION
+# - DB_HOST
+# - DB_PORT
+# - DB_DATABASE
+# - DB_USERNAME
+# - DB_PASSWORD
+
+# ============================================
+# SERVIÇOS OPCIONAIS (Recomendados para Produção)
+# ============================================
+# Redis: Cache e filas (opcional mas recomendado)
+# redis-server>=6.0
+
+# Supervisor: Gerenciamento de processos workers
+# supervisor>=4.0
+
+# Certbot: Certificados SSL gratuitos
+# certbot>=1.0
+
+# ============================================
+# COMANDOS DE INSTALAÇÃO MANUAL
+# ============================================
+# Ubuntu/Debian:
+# sudo apt update
+# sudo apt install -y nginx php8.2 php8.2-fpm php8.2-mysql php8.2-mbstring \
+#   php8.2-xml php8.2-bcmath php8.2-curl php8.2-gd php8.2-zip php8.2-intl \
+#   mysql-server nodejs npm git curl wget unzip
+# sudo npm install -g npm@latest
+# curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+
+# ============================================
+# OBSERVAÇÕES
+# ============================================
+# 1. Este arquivo serve como referência para install.sh
+# 2. Ajustar versões conforme necessário para seu ambiente
+# 3. Para produção, considere usar Docker ou containers
+# 4. Configurar firewall (ufw/iptables) para portas necessárias
+# 5. Configurar backup automático do banco de dados

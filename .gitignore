@@ -1,0 +1,187 @@
+################################################################################
+# PMED2 - .gitignore
+# Arquivos e diretórios que não devem ser versionados
+################################################################################
+
+# ============================================
+# DEPENDÊNCIAS E BUILDS
+# ============================================
+/node_modules
+/vendor
+/public/build
+/public/hot
+/.phpunit.cache
+
+# ============================================
+# ARQUIVOS SENSÍVEIS (SEGURANÇA)
+# ============================================
+# Arquivos de ambiente com senhas e tokens
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+
+# Chaves e certificados
+/storage/*.key
+*.pem
+*.key
+*.crt
+
+# Arquivos de autenticação
+/auth.json
+
+# ============================================
+# BANCO DE DADOS
+# ============================================
+# Arquivos SQL com dados de produção
+*.sql
+!schema-pmed2.sql
+!schema-pmed2-anulacao.sql
+
+# Dumps de banco
+/database/*.sqlite
+/database/*.sqlite-journal
+*.dump
+database/database.sqlite
+
+# ============================================
+# STORAGE E UPLOADS
+# ============================================
+/storage/app/*
+!/storage/app/.gitkeep
+!/storage/app/public
+/storage/app/public/*
+!/storage/app/public/.gitkeep
+
+/storage/framework/cache/*
+!/storage/framework/cache/.gitkeep
+!/storage/framework/cache/data
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitkeep
+
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitkeep
+
+/storage/framework/testing/*
+!/storage/framework/testing/.gitkeep
+
+/storage/framework/views/*
+!/storage/framework/views/.gitkeep
+
+/storage/logs/*
+!/storage/logs/.gitkeep
+
+/storage/pail
+
+# Link simbólico do storage
+/public/storage
+
+# ============================================
+# CACHE E TEMPORÁRIOS
+# ============================================
+/bootstrap/cache/*
+!/bootstrap/cache/.gitkeep
+.phpunit.result.cache
+.phpactor.json
+
+# ============================================
+# IDEs E EDITORES
+# ============================================
+# VSCode
+/.vscode
+/.zed
+
+# PhpStorm / IntelliJ
+/.idea
+*.iml
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# NetBeans
+/nbproject/
+
+# Eclipse
+.buildpath
+.project
+.settings/
+
+# Nova
+/.nova
+
+# Fleet
+/.fleet
+
+# ============================================
+# FERRAMENTAS DE DESENVOLVIMENTO
+# ============================================
+# Laravel Homestead
+Homestead.json
+Homestead.yaml
+
+# Laravel Sail
+/docker-compose.override.yml
+
+# Logs de ferramentas
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.pnpm-debug.log
+
+# Testes
+.phpunit.cache
+coverage/
+.coverage
+*.cover
+htmlcov/
+
+# ============================================
+# SISTEMA OPERACIONAL
+# ============================================
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================
+# BACKUPS
+# ============================================
+*.bak
+*.backup
+*.old
+*.orig
+*.swp
+*.swo
+*~
+
+# ============================================
+# ARQUIVOS TEMPORÁRIOS
+# ============================================
+*.tmp
+*.temp
+*.log
+
+# ============================================
+# ARQUIVOS ESPECÍFICOS DO PROJETO
+# ============================================
+# Arquivos de projeto temporários
+/public/projeto.txt
+
+# Arquivos de documentação em desenvolvimento
+# (remover comentário se não quiser versionar)
+# /docs/drafts/
