@@ -185,3 +185,4 @@ $RECYCLE.BIN/
 # Arquivos de documentação em desenvolvimento
 # (remover comentário se não quiser versionar)
 # /docs/drafts/
+node_modules
