@@ -176,6 +176,9 @@ $RECYCLE.BIN/
 *.temp
 *.log
 
+# Arquivos de análise local
+git.txt
+
 # ============================================
 # ARQUIVOS ESPECÍFICOS DO PROJETO
 # ============================================
