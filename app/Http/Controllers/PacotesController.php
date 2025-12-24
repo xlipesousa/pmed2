@@ -11,7 +11,8 @@ use App\Models\MotivoGlosa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log; // Adicionar esta linha
+use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PacotesController extends Controller
 {
@@ -1440,5 +1441,26 @@ class PacotesController extends Controller
         }
         
         return redirect()->route('pacotes.show', $pacote->id)->with('success', $mensagem);
+    }
+
+    /**
+     * Gera PDF do protocolo de entrega do pacote
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\Response
+     */
+    public function imprimirProtocolo($id)
+    {
+        // Buscar pacote com relacionamento OCS/PSA
+        $pacote = Pacote::with('ocsPsa')->findOrFail($id);
+        
+        // Carregar view do PDF
+        $pdf = Pdf::loadView('pacotes.protocolo-pdf', compact('pacote'));
+        
+        // Configurar papel A4 em modo portrait (retrato)
+        $pdf->setPaper('A4', 'portrait');
+        
+        // Retornar download do PDF
+        return $pdf->download('protocolo-pacote-' . $pacote->id . '.pdf');
     }
 }

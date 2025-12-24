@@ -41,6 +41,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{id}', [PacotesController::class, 'update'])->name('pacotes.update');
         Route::post('/{id}/mover', [PacotesController::class, 'mover'])->name('pacotes.mover');
         Route::get('/{id}/movimentacoes', [PacotesController::class, 'movimentacoes'])->name('pacotes.movimentacoes');
+        Route::get('/{id}/protocolo', [PacotesController::class, 'imprimirProtocolo'])->name('pacotes.protocolo');
         // Rota para verificar se um pacote pode ser movido (verificação prévia)
         Route::get('/{id}/pode-mover', [PacotesController::class, 'podeMover'])->name('pacotes.pode-mover');
         // Adicionar esta nova rota para processar o pagamento

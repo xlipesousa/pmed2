@@ -116,6 +116,9 @@
                                                 <a href="{{ route('pacotes.movimentacoes', $pacote->id) }}" class="btn btn-sm btn-secondary">
                                                     <i class="fas fa-history"></i>
                                                 </a>
+                                                <a href="{{ route('pacotes.protocolo', $pacote->id) }}" class="btn btn-sm btn-warning" target="_blank" title="Imprimir Protocolo">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
                                             </div>
                                         </td>
                                     </tr>
@@ -434,7 +437,7 @@
                                 <th>Valor Glosa</th>
                                 <th>Estado Glosa</th>
                                 <th>Localização Física</th>
-                                <th>Ações</th>
+                                <th width="150">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
