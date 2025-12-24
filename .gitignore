@@ -169,6 +169,10 @@ $RECYCLE.BIN/
 *.swo
 *~
 
+# Backups e exports do sistema
+*.tar.gz
+!pmed2-pagamento.tar.gz
+
 # ============================================
 # ARQUIVOS TEMPORÁRIOS
 # ============================================
@@ -178,7 +182,7 @@ $RECYCLE.BIN/
 
 # Arquivos de análise local
 git.txt
-
+deploy-result.txt
 # ============================================
 # ARQUIVOS ESPECÍFICOS DO PROJETO
 # ============================================
