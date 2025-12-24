@@ -50,8 +50,21 @@ O script `install.sh` irá:
 - ✅ Instalar dependências do Composer e NPM
 - ✅ Configurar banco de dados
 - ✅ Executar migrations
+- ✅ **Criar usuário administrador padrão**
 - ✅ Compilar assets
 - ✅ Configurar permissões
+- ✅ Criar e habilitar serviço systemd
+
+#### 🔐 Credenciais Padrão
+
+Após a instalação, acesse o sistema com:
+
+```
+Email: admin@admin
+Senha: admin
+```
+
+> ⚠️ **IMPORTANTE**: Altere a senha padrão imediatamente após o primeiro acesso!
 
 ### Instalação Manual
 
@@ -76,10 +89,13 @@ php artisan key:generate
 # 5. Execute migrations
 php artisan migrate
 
-# 6. Compile assets
+# 6. Criar usuário administrador
+php artisan db:seed --class=AdminUserSeeder
+
+# 7. Compile assets
 npm run build
 
-# 7. Configure permissões
+# 8. Configure permissões
 chmod -R 775 storage bootstrap/cache
 ```
 

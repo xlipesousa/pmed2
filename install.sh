@@ -243,6 +243,12 @@ php artisan migrate --force
 
 print_success "Migrations executadas"
 
+# Criar usuário administrador
+print_message "Criando usuário administrador padrão..."
+php artisan db:seed --class=AdminUserSeeder --force
+
+print_success "Usuário administrador criado"
+
 # Criar link simbólico para storage
 print_message "Criando link simbólico para storage..."
 php artisan storage:link
