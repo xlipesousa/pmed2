@@ -336,7 +336,87 @@ fi
 
 echo ""
 print_message "======================================"
-print_message "Etapa 7: Otimizações"
+print_message "Etapa 7: Configuração do Serviço Systemd"
+print_message "======================================"
+echo ""
+
+print_message "Criando serviço systemd para PMED2..."
+
+# Criar arquivo de serviço
+cat > /etc/systemd/system/pmed2.service << EOF
+[Unit]
+Description=PMED2 - Sistema de Gestão de Faturas Hospitalares
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=$INSTALL_DIR
+ExecStart=/usr/bin/php $INSTALL_DIR/artisan serve --host=0.0.0.0 --port=8000 --env=production
+Restart=always
+RestartSec=3
+
+# Variáveis de ambiente
+Environment="APP_ENV=production"
+Environment="APP_DEBUG=false"
+
+# Logs
+StandardOutput=append:/var/log/pmed2.log
+StandardError=append:/var/log/pmed2-error.log
+SyslogIdentifier=pmed2
+
+# Segurança
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Criar arquivos de log
+touch /var/log/pmed2.log
+touch /var/log/pmed2-error.log
+chown www-data:www-data /var/log/pmed2.log
+chown www-data:www-data /var/log/pmed2-error.log
+
+print_success "Serviço systemd criado"
+
+# Configurar .env para produção
+print_message "Configurando aplicação para modo produção..."
+sed -i "s/APP_ENV=.*/APP_ENV=production/" "$INSTALL_DIR/.env"
+sed -i "s/APP_DEBUG=.*/APP_DEBUG=false/" "$INSTALL_DIR/.env"
+sed -i "s/APP_URL=.*/APP_URL=http:\/\/$DOMAIN/" "$INSTALL_DIR/.env"
+
+print_success "Aplicação configurada para produção"
+
+# Recarregar systemd
+print_message "Recarregando systemd..."
+systemctl daemon-reload
+
+# Habilitar serviço para iniciar no boot
+print_message "Habilitando serviço PMED2 para iniciar no boot..."
+systemctl enable pmed2.service
+
+# Iniciar serviço
+print_message "Iniciando serviço PMED2..."
+systemctl start pmed2.service
+
+# Verificar status
+sleep 2
+if systemctl is-active --quiet pmed2.service; then
+    print_success "Serviço PMED2 iniciado com sucesso"
+    systemctl status pmed2.service --no-pager
+else
+    print_error "Erro ao iniciar serviço PMED2"
+    print_message "Verificando logs..."
+    journalctl -u pmed2.service -n 50 --no-pager
+fi
+
+echo ""
+print_message "======================================"
+print_message "Etapa 8: Otimizações"
 print_message "======================================"
 echo ""
 
@@ -357,22 +437,28 @@ echo ""
 print_success "Sistema PMED2 instalado com sucesso!"
 echo ""
 print_message "Informações de acesso:"
-echo -e "  ${GREEN}URL:${NC} http://$DOMAIN"
+echo -e "  ${GREEN}URL:${NC} http://$DOMAIN:8000"
 echo -e "  ${GREEN}Banco:${NC} $DB_NAME"
 echo -e "  ${GREEN}Usuário DB:${NC} $DB_USER"
+echo ""
+print_message "Gerenciamento do serviço:"
+echo -e "  ${BLUE}Iniciar:${NC}   sudo systemctl start pmed2"
+echo -e "  ${BLUE}Parar:${NC}     sudo systemctl stop pmed2"
+echo -e "  ${BLUE}Reiniciar:${NC} sudo systemctl restart pmed2"
+echo -e "  ${BLUE}Status:${NC}    sudo systemctl status pmed2"
+echo -e "  ${BLUE}Logs:${NC}      sudo journalctl -u pmed2 -f"
 echo ""
 print_warning "IMPORTANTE:"
 echo "  1. Configure um usuário administrador no banco de dados"
 echo "  2. Revise as configurações em .env"
-echo "  3. Configure SSL/HTTPS para produção"
+echo "  3. Configure SSL/HTTPS para produção (certbot)"
 echo "  4. Configure backup automático do banco de dados"
-echo ""
-print_message "Para iniciar em modo desenvolvimento:"
-echo "  php artisan serve"
-echo "  npm run dev"
+echo "  5. O serviço inicia automaticamente no boot do sistema"
 echo ""
 print_message "Logs do sistema:"
-echo "  tail -f storage/logs/laravel.log"
+echo "  Aplicação: tail -f /var/log/pmed2.log"
+echo "  Erros: tail -f /var/log/pmed2-error.log"
+echo "  Laravel: tail -f storage/logs/laravel.log"
 echo ""
 
 exit 0
