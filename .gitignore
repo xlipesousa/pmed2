@@ -199,3 +199,9 @@ node_modules
 
 # Levantamento do ambiente (nao versionado)
 /levantamento.md
+
+# Plano do protocolo (nao versionado)
+/plano-protocolo.md
+
+# Arquivos locais de migracao (nao versionados)
+/migrate.md

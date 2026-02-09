@@ -12,6 +12,11 @@
 @stop
 
 @section('content')
+    @if(session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
     <form id="form-criar-pacote" action="{{ route('pacotes.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="row">

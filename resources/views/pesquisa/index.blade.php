@@ -283,7 +283,7 @@
                                 @endphp
 
                                 @foreach($resultados as $pacote)
-                                <tr>
+                                <tr class="{{ $pacote->estado_glosa == 'Aguardando Recurso de Glosa' ? 'table-warning' : '' }}">
                                     <td>{{ $pacote->id }}</td>
                                     <td>{{ $pacote->ocsPsa->nome ?? 'N/A' }}</td>
                                     <td>{{ $pacote->numero_fatura }}</td>
@@ -313,10 +313,11 @@
                                             $pacote->estado_glosa == 'Glosa não identificada' ? 'light' :
                                             ($pacote->estado_glosa == 'Glosa identificada' ? 'warning' :
                                             ($pacote->estado_glosa == 'Existência de Glosa Notificada' ? 'warning' :
+                                            ($pacote->estado_glosa == 'Aguardando Recurso de Glosa' ? 'info' :
                                             ($pacote->estado_glosa == 'Recurso não recebido' ? 'danger' :
                                             ($pacote->estado_glosa == 'Recurso recebido' ? 'info' :
                                             ($pacote->estado_glosa == 'Recurso indeferido' ? 'danger' :
-                                            ($pacote->estado_glosa == 'Recurso deferido' ? 'success' : 'secondary'))))))
+                                            ($pacote->estado_glosa == 'Recurso deferido' ? 'success' : 'secondary')))))))
                                         }}">
                                             {{ $pacote->estado_glosa }}
                                         </span>

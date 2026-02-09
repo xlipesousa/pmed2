@@ -46,8 +46,8 @@
                 <!-- TAB PROTOCOLO -->
                 <div class="tab-pane fade {{ $localizacaoAtiva == 'protocolo' ? 'show active' : '' }}" id="protocolo" role="tabpanel" aria-labelledby="protocolo-tab">
                     <div class="mb-3">
-                        <button id="criar-pacote" class="btn btn-primary mr-2">
-                            <i class="fas fa-plus-circle"></i> Criar Novo Pacote
+                        <button id="receber-pacote" class="btn btn-primary mr-2">
+                            <i class="fas fa-plus-circle"></i> Receber Pacote
                         </button>
                         <button id="mover-lote-lisura" class="btn btn-secondary">
                             <i class="fas fa-exchange-alt"></i> Mover em Lote
@@ -479,6 +479,51 @@
         </div>
     </div>
 
+    @if(Auth::user()->role == 'admin' || Auth::user()->role == 'protocolo')
+        <div class="modal fade" id="modalReceberPacote" tabindex="-1" role="dialog" aria-labelledby="modalReceberPacoteLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalReceberPacoteLabel">Receber Pacote</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Selecione o tipo de recebimento:</p>
+                        <div class="d-flex flex-wrap mb-3">
+                            <button type="button" class="btn btn-primary mr-2 mb-2" id="btn-novo-pacote">
+                                <i class="fas fa-plus-circle"></i> Novo Pacote
+                            </button>
+                            <button type="button" class="btn btn-outline-primary mb-2" id="btn-recurso-glosa">
+                                <i class="fas fa-file-import"></i> Recurso de Glosa
+                            </button>
+                        </div>
+
+                        <div id="recurso-glosa-fields" class="d-none">
+                            <div class="form-group">
+                                <label for="numero_fatura_recurso">Numero da Fatura</label>
+                                <input type="text" class="form-control" id="numero_fatura_recurso" placeholder="Ex: FT-1234">
+                            </div>
+                            <div class="form-group">
+                                <label for="ocs_psa_id_recurso">OCS/PSA</label>
+                                <select class="form-control" id="ocs_psa_id_recurso">
+                                    <option value="">Selecione...</option>
+                                    @foreach($ocsPsaList as $ocsPsa)
+                                        <option value="{{ $ocsPsa->id }}">{{ $ocsPsa->nome }} {{ $ocsPsa->codigo_interno ? '(' . $ocsPsa->codigo_interno . ')' : '' }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-success" id="btn-pesquisar-recurso">
+                                <i class="fas fa-search"></i> Pesquisar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Modal de Confirmação para Mover Pacote -->
     <div class="modal fade" id="modalMoverPacote" tabindex="-1" role="dialog" aria-labelledby="modalMoverPacoteLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -705,10 +750,50 @@
                 }
             });
             
-            // Criar novo pacote
-            $('#criar-pacote').click(function() {
+            // Receber pacote (novo ou recurso de glosa)
+            $('#receber-pacote').click(function() {
+                resetReceberPacoteModal();
+                $('#modalReceberPacote').modal('show');
+            });
+
+            $('#btn-novo-pacote').click(function() {
                 window.location.href = '{{ route("pacotes.create") }}';
             });
+
+            $('#btn-recurso-glosa').click(function() {
+                $('#recurso-glosa-fields').removeClass('d-none');
+                $('#numero_fatura_recurso').focus();
+            });
+
+            $('#btn-pesquisar-recurso').click(function() {
+                var numeroFatura = $('#numero_fatura_recurso').val().trim();
+                var ocsPsaId = $('#ocs_psa_id_recurso').val();
+
+                if (!numeroFatura || !ocsPsaId) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Campos obrigatorios',
+                            text: 'Informe o numero da fatura e a OCS/PSA para pesquisar o recurso.'
+                        });
+                    } else {
+                        alert('Informe o numero da fatura e a OCS/PSA para pesquisar o recurso.');
+                    }
+                    return;
+                }
+
+                var url = '{{ route("pesquisa.buscar") }}' +
+                    '?numero_fatura=' + encodeURIComponent(numeroFatura) +
+                    '&ocs_psa_id=' + encodeURIComponent(ocsPsaId);
+
+                window.location.href = url;
+            });
+
+            function resetReceberPacoteModal() {
+                $('#recurso-glosa-fields').addClass('d-none');
+                $('#numero_fatura_recurso').val('');
+                $('#ocs_psa_id_recurso').val('');
+            }
 
             // Modificar a função que verifica se o pacote pode ser movido
             $('.btn-mover-pacote').click(function(e) {

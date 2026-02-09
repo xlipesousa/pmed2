@@ -35,8 +35,10 @@ class PacotesController extends Controller
         $pacotes = Pacote::with(['ocsPsa', 'tipoPacote', 'tipoConta'])
                         ->orderBy('id', 'desc')
                         ->get();
+
+        $ocsPsaList = OcsPsa::where('ativo', true)->orderBy('nome')->get();
         
-        return view('pacotes.index', compact('pacotes', 'localizacaoAtiva'));
+        return view('pacotes.index', compact('pacotes', 'localizacaoAtiva', 'ocsPsaList'));
     }
 
     /**
@@ -77,6 +79,24 @@ class PacotesController extends Controller
             'data_entrada' => 'required|date_format:d/m/Y|before_or_equal:today',
             'valor_fatura' => 'required|string',
         ]);
+
+        // Verificar duplicidade por numero da fatura + OCS/PSA
+        $pacoteExistente = Pacote::where('numero_fatura', $request->numero_fatura)
+            ->where('ocs_psa_id', $request->ocs_psa_id)
+            ->first();
+
+        if ($pacoteExistente) {
+            $estadoGlosa = $pacoteExistente->estado_glosa ?? 'Nao informado';
+            $mensagem = 'Ja existe um pacote com esta fatura para a OCS/PSA selecionada. '
+                . 'Pacote #' . $pacoteExistente->id . ' | Estado da Glosa: ' . $estadoGlosa . '.';
+            if ($estadoGlosa === 'Aguardando Recurso de Glosa') {
+                $mensagem .= ' Use o recebimento de recurso de glosa no pacote existente.';
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $mensagem);
+        }
 
         // Converter valor_fatura de formatação brasileira para decimal
         $valorFatura = str_replace('.', '', $request->valor_fatura);  // Remove pontos
@@ -137,7 +157,8 @@ class PacotesController extends Controller
     public function show($id)
     {
         $pacote = Pacote::with(['ocsPsa', 'tipoPacote', 'tipoConta'])->findOrFail($id);
-        return view('pacotes.ver', compact('pacote'));
+        $ocsPsaList = OcsPsa::where('ativo', true)->orderBy('nome')->get();
+        return view('pacotes.ver', compact('pacote', 'ocsPsaList'));
     }
 
     /**
