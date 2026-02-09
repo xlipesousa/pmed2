@@ -193,3 +193,9 @@ deploy-result.txt
 # (remover comentário se não quiser versionar)
 # /docs/drafts/
 node_modules
+
+# Plano de migracao (nao versionado)
+/plano.md
+
+# Levantamento do ambiente (nao versionado)
+/levantamento.md

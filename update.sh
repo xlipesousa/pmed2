@@ -40,6 +40,15 @@ print_message "PMED2 - Atualização do Sistema"
 print_message "======================================"
 echo ""
 
+APP_DIR="/var/www/pmed2"
+
+# Verificar se a aplicacao ja esta no novo padrao de producao
+if [[ "$PWD" != "$APP_DIR" ]]; then
+    print_warning "Instalacao antiga detectada (modo dev)."
+    print_warning "Execute ./migrate.sh para migrar para $APP_DIR antes de atualizar."
+    exit 1
+fi
+
 # Verificar se estamos em um repositório git
 if [ ! -d ".git" ]; then
     print_error "Este diretório não é um repositório Git!"
@@ -130,10 +139,21 @@ print_message "Atualizando dependências PHP (Composer)..."
 composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 print_success "Dependências PHP atualizadas"
 
-# Atualizar dependências do NPM
-print_message "Atualizando dependências JavaScript (NPM)..."
-npm install --production
-print_success "Dependências JavaScript atualizadas"
+# Atualizar dependencias do NPM
+print_message "Atualizando dependencias JavaScript (NPM)..."
+if [[ -f package-lock.json ]]; then
+    if npm ci --dry-run >/dev/null 2>&1; then
+        npm ci
+    else
+        print_warning "Lockfile fora de sincronia; executando npm install"
+        npm install
+        print_message "Executando npm ci com lockfile atualizado..."
+        npm ci
+    fi
+else
+    npm install
+fi
+print_success "Dependencias JavaScript atualizadas"
 
 echo ""
 print_message "======================================"
@@ -156,6 +176,50 @@ echo ""
 print_message "Compilando assets frontend..."
 npm run build
 print_success "Assets compilados"
+
+# Publicar assets e traducoes do AdminLTE, se disponivel
+print_message "Publicando assets e traducoes do AdminLTE..."
+mkdir -p lang storage/logs public/vendor
+chown -R www-data:www-data lang storage/logs public/vendor
+if php artisan list --format=txt | grep -q "adminlte:install"; then
+    if ! sudo -u www-data php artisan adminlte:install --only=assets --force; then
+        print_warning "Falha ao publicar assets do AdminLTE"
+    fi
+    if ! sudo -u www-data php artisan adminlte:install --only=translations --force; then
+        print_warning "Falha ao publicar traducoes do AdminLTE"
+    fi
+else
+    print_warning "Comando adminlte:install nao encontrado"
+fi
+
+# Garantir traducoes pt_BR quando pacote usa pt-br
+ADMINLTE_LANG_BASE="lang/vendor/adminlte"
+if [[ -d "$ADMINLTE_LANG_BASE/pt-br" && ! -d "$ADMINLTE_LANG_BASE/pt_BR" ]]; then
+    print_warning "Copiando traducoes AdminLTE de pt-br para pt_BR"
+    cp -a "$ADMINLTE_LANG_BASE/pt-br" "$ADMINLTE_LANG_BASE/pt_BR"
+    chown -R www-data:www-data "$ADMINLTE_LANG_BASE/pt_BR"
+fi
+
+# Garantir icheck-bootstrap para a tela de login
+ICHECK_DIR="public/vendor/icheck-bootstrap"
+ICHECK_FILE="$ICHECK_DIR/icheck-bootstrap.min.css"
+if [[ ! -f "$ICHECK_FILE" ]]; then
+    print_warning "Baixando icheck-bootstrap para assets do login"
+    mkdir -p "$ICHECK_DIR"
+    curl -fsSL -o "$ICHECK_FILE" "https://cdn.jsdelivr.net/npm/icheck-bootstrap@3.0.1/icheck-bootstrap.min.css"
+    chown -R www-data:www-data "$ICHECK_DIR"
+fi
+
+# Copiar logo customizado do projeto
+CUSTOM_LOGO_SRC="$(pwd)/logo.png"
+CUSTOM_LOGO_DST="public/img/logo.png"
+if [[ -f "$CUSTOM_LOGO_SRC" ]]; then
+    mkdir -p public/img
+    cp -f "$CUSTOM_LOGO_SRC" "$CUSTOM_LOGO_DST"
+    chown www-data:www-data "$CUSTOM_LOGO_DST"
+else
+    print_warning "Logo personalizado nao encontrado em $CUSTOM_LOGO_SRC"
+fi
 
 echo ""
 print_message "======================================"

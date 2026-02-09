@@ -7,6 +7,35 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    private function foreignKeyExists(string $table, string $column, ?string $constraint = null): bool
+    {
+        $database = DB::getDatabaseName();
+        $rows = DB::select(
+            'SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = ?
+               AND TABLE_NAME = ?
+               AND COLUMN_NAME = ?
+               AND REFERENCED_TABLE_NAME IS NOT NULL',
+            [$database, $table, $column]
+        );
+
+        if (empty($rows)) {
+            return false;
+        }
+
+        if ($constraint === null) {
+            return true;
+        }
+
+        foreach ($rows as $row) {
+            if ($row->CONSTRAINT_NAME === $constraint) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Run the migrations.
      */
@@ -27,20 +56,21 @@ return new class extends Migration
         
         // Adicionar chave estrangeira - usando try/catch para evitar erros
         try {
-            Schema::table('pacotes', function (Blueprint $table) {
-                // Tentar remover a chave estrangeira primeiro (se existir)
-                try {
-                    $table->dropForeign(['motivo_glosa_id']);
-                } catch (\Exception $e) {
-                    // Ignora erro se a chave não existir
-                }
-                
-                // Adicionar a chave estrangeira
-                $table->foreign('motivo_glosa_id')
-                    ->references('id')
-                    ->on('motivos_glosa')
-                    ->onDelete('set null');
-            });
+            $constraintName = 'pacotes_motivo_glosa_id_foreign';
+            if ($this->foreignKeyExists('pacotes', 'motivo_glosa_id', $constraintName)) {
+                Schema::table('pacotes', function (Blueprint $table) use ($constraintName) {
+                    $table->dropForeign($constraintName);
+                });
+            }
+
+            if (!$this->foreignKeyExists('pacotes', 'motivo_glosa_id')) {
+                Schema::table('pacotes', function (Blueprint $table) {
+                    $table->foreign('motivo_glosa_id')
+                        ->references('id')
+                        ->on('motivos_glosa')
+                        ->onDelete('set null');
+                });
+            }
         } catch (\Exception $e) {
             // Se falhar, registrar o erro mas continuar a migração
             echo 'Aviso: Não foi possível adicionar a chave estrangeira - ' . $e->getMessage() . "\n";
@@ -54,9 +84,12 @@ return new class extends Migration
     {
         // Remover chave estrangeira com tratamento de erro
         try {
-            Schema::table('pacotes', function (Blueprint $table) {
-                $table->dropForeign(['motivo_glosa_id']);
-            });
+            $constraintName = 'pacotes_motivo_glosa_id_foreign';
+            if ($this->foreignKeyExists('pacotes', 'motivo_glosa_id', $constraintName)) {
+                Schema::table('pacotes', function (Blueprint $table) use ($constraintName) {
+                    $table->dropForeign($constraintName);
+                });
+            }
         } catch (\Exception $e) {
             // Ignora erro se a chave não existir
         }
