@@ -188,8 +188,10 @@ print_message "======================================"
 print_message "Etapa 1: Atualizacao do Sistema"
 print_message "======================================"
 
+APT_UPDATE_ALLOWED=1
 if [[ "$SKIP_UPDATE" -eq 1 ]]; then
     print_warning "apt update ignorado por flag"
+    APT_UPDATE_ALLOWED=0
 elif [[ -t 0 ]]; then
     read -p "Rodar apt update? (S/n): " -n 1 -r
     echo
@@ -197,9 +199,11 @@ elif [[ -t 0 ]]; then
         apt update
     else
         print_warning "apt update ignorado por escolha do usuario"
+        APT_UPDATE_ALLOWED=0
     fi
 else
     print_warning "Modo nao interativo: apt update ignorado (use --skip-update para suprimir aviso)"
+    APT_UPDATE_ALLOWED=0
 fi
 
 if [[ "$SKIP_UPGRADE" -eq 1 ]]; then
@@ -224,7 +228,11 @@ print_message "======================================"
 
 apt install -y software-properties-common
 add-apt-repository -y ppa:ondrej/php
-apt update
+if [[ "$APT_UPDATE_ALLOWED" -eq 1 ]]; then
+    apt update
+else
+    print_warning "apt update foi ignorado; instalacao de pacotes pode falhar"
+fi
 
 apt install -y \
     nginx \
