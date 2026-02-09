@@ -34,8 +34,8 @@ read_env_value() {
     local key="$1"
     local value
     value=$(grep -E "^${key}=" .env | tail -n 1 | cut -d= -f2-)
-    value=${value%"}
-    value=${value#"}
+    value=${value%\"}
+    value=${value#\"}
     value=${value%\'}
     value=${value#\'}
     printf '%s' "$value"
