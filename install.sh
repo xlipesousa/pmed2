@@ -273,10 +273,21 @@ PHP_FPM_SOCK="/var/run/php/php${PHP_VERSION}-fpm.sock"
 
 print_success "PHP $PHP_VERSION instalado"
 
-print_message "Instalando MySQL Server..."
-apt install -y mysql-server mysql-client
+DB_SERVICE=""
+if systemctl is-active --quiet mariadb 2>/dev/null || dpkg -s mariadb-server >/dev/null 2>&1; then
+    DB_SERVICE="mariadb"
+elif systemctl is-active --quiet mysql 2>/dev/null || dpkg -s mysql-server >/dev/null 2>&1; then
+    DB_SERVICE="mysql"
+fi
 
-print_success "MySQL instalado"
+if [[ -z "$DB_SERVICE" ]]; then
+    print_message "Instalando MySQL Server..."
+    apt install -y mysql-server mysql-client
+    DB_SERVICE="mysql"
+    print_success "MySQL instalado"
+else
+    print_message "Banco $DB_SERVICE ja instalado, pulando instalacao"
+fi
 
 print_message "Instalando Node.js 20.x..."
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
@@ -304,8 +315,8 @@ print_message "======================================"
 print_message "Etapa 3: Configuracao do MySQL"
 print_message "======================================"
 
-systemctl start mysql
-systemctl enable mysql
+systemctl start "$DB_SERVICE"
+systemctl enable "$DB_SERVICE"
 
 print_message "Configurando banco de dados..."
 DB_USER_ESC=$(escape_mysql_string "$DB_USER")
