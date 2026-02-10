@@ -25,6 +25,11 @@
                                 <i class="fas fa-hospital"></i> OCS/PSA
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a href="{{ route('configuracoes.upgrade') }}" class="nav-link {{ request()->routeIs('configuracoes.upgrade') ? 'active' : '' }}">
+                                <i class="fas fa-arrow-up"></i> Upgrade
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>

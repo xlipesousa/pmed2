@@ -205,3 +205,6 @@ node_modules
 
 # Arquivos locais de migracao (nao versionados)
 /migrate.md
+
+# Plano de upgrade (nao versionado)
+/plano-upgrade.md

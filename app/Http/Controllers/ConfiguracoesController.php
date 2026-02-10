@@ -14,6 +14,8 @@ use App\Models\PacoteAnuladoAudit; //  ADICIONAR APENAS ESTA LINHA
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Artisan;
+use App\Jobs\ExecutarUpgrade;
 
 class ConfiguracoesController extends Controller
 {
@@ -44,6 +46,118 @@ class ConfiguracoesController extends Controller
     public function ocspsa()
     {
         return view('configuracoes.ocspsa');
+    }
+
+    public function upgrade()
+    {
+        [$commitHash, $commitDate] = $this->getCommitInfo();
+        $upgradeStatus = $this->getUpgradeStatus();
+
+        return view('configuracoes.upgrade', compact('commitHash', 'commitDate', 'upgradeStatus'));
+    }
+
+    public function upgradeVerificar()
+    {
+        [$commitHash, $commitDate] = $this->getCommitInfo();
+        $status = 'indisponivel';
+        $ahead = null;
+        $behind = null;
+        $message = null;
+
+        if (is_dir(base_path('.git'))) {
+            $repoPath = escapeshellarg(base_path());
+            shell_exec('git -C ' . $repoPath . ' fetch origin 2>/dev/null');
+            $counts = trim((string) shell_exec('git -C ' . $repoPath . ' rev-list --left-right --count HEAD...origin/main 2>/dev/null'));
+
+            if ($counts !== '') {
+                [$ahead, $behind] = array_map('intval', preg_split('/\s+/', $counts));
+                $status = ($behind > 0) ? 'atualizacao_disponivel' : 'atualizado';
+            } else {
+                $message = 'Nao foi possivel ler o status do repositorio.';
+            }
+        } else {
+            $message = 'Repositorio Git nao encontrado em ' . base_path() . '.';
+        }
+
+        return redirect()
+            ->route('configuracoes.upgrade')
+            ->with('upgrade_status', $status)
+            ->with('upgrade_ahead', $ahead)
+            ->with('upgrade_behind', $behind)
+            ->with('upgrade_commit', $commitHash)
+            ->with('upgrade_commit_date', $commitDate)
+            ->with('upgrade_message', $message);
+    }
+
+    public function upgradeExecutar()
+    {
+        $this->setUpgradeStatus(['status' => 'em_execucao']);
+        dispatch(new ExecutarUpgrade());
+
+        return redirect()
+            ->route('configuracoes.upgrade')
+            ->with('upgrade_execucao', 'em_execucao');
+    }
+
+    public function upgradeWorker()
+    {
+        $queueConnection = config('queue.default');
+        $workerAtivo = false;
+
+        if ($queueConnection === 'sync') {
+            $workerAtivo = false;
+        } else {
+            $workerAtivo = (bool) trim((string) shell_exec("ps aux | grep -E 'queue:work|queue:listen' | grep -v grep"));
+        }
+
+        return redirect()
+            ->route('configuracoes.upgrade')
+            ->with('upgrade_worker', $workerAtivo ? 'ativo' : 'inativo')
+            ->with('upgrade_queue', $queueConnection);
+    }
+
+    private function getCommitInfo(): array
+    {
+        $commitHash = 'N/A';
+        $commitDate = 'N/A';
+
+        if (is_dir(base_path('.git'))) {
+            $repoPath = escapeshellarg(base_path());
+            $commitHash = trim((string) shell_exec('git -C ' . $repoPath . ' rev-parse --short HEAD 2>/dev/null'));
+            $commitDate = trim((string) shell_exec('git -C ' . $repoPath . ' log -1 --format=%cd --date=iso 2>/dev/null'));
+
+            if ($commitHash === '') {
+                $commitHash = 'N/A';
+            }
+            if ($commitDate === '') {
+                $commitDate = 'N/A';
+            }
+        }
+
+        return [$commitHash, $commitDate];
+    }
+
+    private function getUpgradeStatus(): array
+    {
+        $statusPath = storage_path('logs/upgrade-status.json');
+        if (!file_exists($statusPath)) {
+            return ['status' => 'desconhecido'];
+        }
+
+        $raw = file_get_contents($statusPath);
+        $data = json_decode($raw, true);
+        if (!is_array($data)) {
+            return ['status' => 'desconhecido'];
+        }
+
+        return $data;
+    }
+
+    private function setUpgradeStatus(array $data): void
+    {
+        $statusPath = storage_path('logs/upgrade-status.json');
+        $payload = array_merge(['status' => 'desconhecido', 'updated_at' => now()->toDateTimeString()], $data);
+        file_put_contents($statusPath, json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
     public function salvarSistema(Request $request)

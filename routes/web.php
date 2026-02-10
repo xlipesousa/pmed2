@@ -77,6 +77,10 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['can:admin'])->group(function () {
         // Configurações
         Route::get('/configuracoes/sistema', [ConfiguracoesController::class, 'sistema'])->name('configuracoes.sistema');
+        Route::get('/configuracoes/upgrade', [ConfiguracoesController::class, 'upgrade'])->name('configuracoes.upgrade');
+        Route::post('/configuracoes/upgrade/verificar', [ConfiguracoesController::class, 'upgradeVerificar'])->name('configuracoes.upgrade.verificar');
+        Route::post('/configuracoes/upgrade/executar', [ConfiguracoesController::class, 'upgradeExecutar'])->name('configuracoes.upgrade.executar');
+        Route::post('/configuracoes/upgrade/worker', [ConfiguracoesController::class, 'upgradeWorker'])->name('configuracoes.upgrade.worker');
         Route::post('/configuracoes/sistema/salvar', [ConfiguracoesController::class, 'sistemasSalvar'])->name('configuracoes.sistema.salvar');
         
         // Gerenciamento de Tipos de Pacote
