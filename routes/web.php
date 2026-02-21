@@ -21,6 +21,15 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'app' => config('app.name'),
+        'env' => app()->environment(),
+        'time' => now()->toIso8601String(),
+    ], 200);
+});
+
 // Rotas de autenticação
 Auth::routes();
 

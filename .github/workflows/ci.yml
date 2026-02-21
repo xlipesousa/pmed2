@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer
+
+      - name: Composer validate
+        run: composer validate --no-check-publish
+
+      - name: Install deps (com dev)
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Preparar ambiente de teste
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Testes
+        run: php artisan test
+
+      - name: PHPStan/Larastan
+        run: vendor/bin/phpstan analyse --memory-limit=1G
+
+      - name: Composer audit
+        run: composer audit
+
+  package:
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer
+
+      - name: Install deps (release)
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress
+
+      - name: Build zip de release
+        run: |
+          REF="${GITHUB_REF_NAME:-$GITHUB_SHA}"
+          mkdir -p build
+          zip -rq "build/pmed2-${REF}.zip" . \
+            -x ".git/*" "node_modules/*" "storage/logs/*" "storage/framework/*"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pmed2-${{ github.ref_name }}
+          path: build/*.zip
+          retention-days: 10
