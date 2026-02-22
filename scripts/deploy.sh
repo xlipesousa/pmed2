@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 0002
 
 TAG="${1:?Uso: deploy.sh <tag-semver>}"
 APP_BASE="/var/www/pmed2"
@@ -40,8 +41,17 @@ mkdir -p \
   "$SHARED/storage/framework/sessions" \
   "$SHARED/storage/framework/testing" \
   "$SHARED/storage/logs"
-chown -R www-data:www-data "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
-chmod -R ug+rwX "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache"
+
+if chgrp -R www-data "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null; then
+  :
+elif sudo -n chgrp -R www-data "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null; then
+  :
+else
+  echo "Aviso: não foi possível ajustar grupo para www-data em storage/bootstrap-cache."
+fi
+
+chmod -R ug+rwX "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
+find "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" -type d -exec chmod g+s {} + 2>/dev/null || true
 
 "$SCRIPTS/backup.sh"
 
