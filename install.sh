@@ -35,7 +35,7 @@ Uso: sudo ./install.sh [opcoes]
 
 Opcoes:
   --db-name=NAME        Nome do banco (default: pmed2)
-    --db-user=USER        Usuario do banco (default: pmeduser)
+        --db-user=USER        Usuario do banco (default: pmed2user)
   --db-pass=PASS        Senha do banco (obrigatorio se nao interativo)
   --domain=HOST         Dominio/IP (default: localhost)
   --app-dir=DIR         Diretorio do app (default: /var/www/pmed2)
@@ -69,7 +69,7 @@ escape_mysql_string() {
 APP_DIR="/var/www/pmed2"
 DOMAIN="localhost"
 DB_NAME="pmed2"
-DB_USER="pmeduser"
+DB_USER="pmed2user"
 DB_PASS=""
 APP_URL_OVERRIDE=""
 USE_HTTPS=0
