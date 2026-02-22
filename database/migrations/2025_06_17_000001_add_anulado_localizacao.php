@@ -22,20 +22,25 @@ return new class extends Migration
             // A coluna localizacao_atual já aceita qualquer string
             
             // Opcional: Inserir documentação da nova localização em uma tabela de configurações
-            DB::table('configuracoes')->insertOrIgnore([
+            $payload = [
                 'chave' => 'localizacoes_validas',
                 'valor' => json_encode([
                     'protocolo',
-                    'lisura', 
+                    'lisura',
                     'sire',
                     'glosa',
                     'arquivo',
                     'anulado' // NOVA LOCALIZAÇÃO
                 ]),
-                'descricao' => 'Localizações válidas para pacotes',
                 'created_at' => now(),
                 'updated_at' => now()
-            ]);
+            ];
+
+            if (Schema::hasColumn('configuracoes', 'descricao')) {
+                $payload['descricao'] = 'Localizações válidas para pacotes';
+            }
+
+            DB::table('configuracoes')->insertOrIgnore($payload);
         }
     }
 
