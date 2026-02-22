@@ -13,11 +13,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup PHP 8.3
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-          tools: composer
+      - name: Validar pré-requisitos do runner
+        run: |
+          set -euo pipefail
+          command -v php
+          command -v composer
+          command -v zip
+          command -v ssh
+          command -v scp
+          php -v
+          composer --version
 
       - name: Install deps (release)
         run: composer install --no-dev --prefer-dist --no-interaction --no-progress
