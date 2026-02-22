@@ -41,7 +41,7 @@ cd "$RELEASE_DIR"
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache || true
-php artisan view:cache
+php artisan view:cache || true
 
 ln -sfn "$RELEASE_DIR" "$APP_BASE/current"
 systemctl reload php8.3-fpm
