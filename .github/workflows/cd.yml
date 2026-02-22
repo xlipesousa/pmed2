@@ -28,23 +28,28 @@ jobs:
           zip -rq "build/pmed2-${{ github.ref_name }}.zip" . \
             -x ".git/*" "node_modules/*" "storage/logs/*" "storage/framework/*"
 
+      - name: Preparar chave SSH
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          cat > ~/.ssh/pmed2_cd <<'EOF'
+          ${{ secrets.PMED2_SSH_KEY }}
+          EOF
+          chmod 600 ~/.ssh/pmed2_cd
+          ssh-keyscan -H "${{ secrets.PMED2_SSH_HOST }}" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
       - name: Enviar zip para servidor
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.PMED2_SSH_HOST }}
-          username: ${{ secrets.PMED2_SSH_USER }}
-          key: ${{ secrets.PMED2_SSH_KEY }}
-          source: "build/*.zip"
-          target: "/tmp"
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes build/*.zip "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}:/tmp/"
 
       - name: Enviar scripts para servidor
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.PMED2_SSH_HOST }}
-          username: ${{ secrets.PMED2_SSH_USER }}
-          key: ${{ secrets.PMED2_SSH_KEY }}
-          source: "scripts/deploy.sh,scripts/rollback.sh,scripts/backup.sh"
-          target: "/tmp/pmed2-scripts"
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}" "mkdir -p /tmp/pmed2-scripts/scripts"
+          scp -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes scripts/deploy.sh scripts/rollback.sh scripts/backup.sh "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}:/tmp/pmed2-scripts/scripts/"
 
       - name: Calcular hashes locais dos scripts
         id: local_hashes
@@ -55,50 +60,42 @@ jobs:
           echo "backup_sha=$(sha256sum scripts/backup.sh | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Instalar scripts na pasta shared
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.PMED2_SSH_HOST }}
-          username: ${{ secrets.PMED2_SSH_USER }}
-          key: ${{ secrets.PMED2_SSH_KEY }}
-          script: |
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}" '
             set -euo pipefail
             mkdir -p /var/www/pmed2/shared/scripts
             cp -f /tmp/pmed2-scripts/scripts/deploy.sh /var/www/pmed2/shared/scripts/deploy.sh
             cp -f /tmp/pmed2-scripts/scripts/rollback.sh /var/www/pmed2/shared/scripts/rollback.sh
             cp -f /tmp/pmed2-scripts/scripts/backup.sh /var/www/pmed2/shared/scripts/backup.sh
             chmod 755 /var/www/pmed2/shared/scripts/deploy.sh /var/www/pmed2/shared/scripts/rollback.sh /var/www/pmed2/shared/scripts/backup.sh
+          '
 
       - name: Validar scripts remotos (auditoria)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.PMED2_SSH_HOST }}
-          username: ${{ secrets.PMED2_SSH_USER }}
-          key: ${{ secrets.PMED2_SSH_KEY }}
-          script: |
+        run: |
+          set -euo pipefail
+          expected_deploy='${{ steps.local_hashes.outputs.deploy_sha }}'
+          expected_rollback='${{ steps.local_hashes.outputs.rollback_sha }}'
+          expected_backup='${{ steps.local_hashes.outputs.backup_sha }}'
+
+          remote_output="$(ssh -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}" '
             set -euo pipefail
             ls -l /var/www/pmed2/shared/scripts
-            sha256sum /var/www/pmed2/shared/scripts/deploy.sh \
-                      /var/www/pmed2/shared/scripts/rollback.sh \
-                      /var/www/pmed2/shared/scripts/backup.sh
+            echo "DEPLOY=$(sha256sum /var/www/pmed2/shared/scripts/deploy.sh | awk '{print \$1}')"
+            echo "ROLLBACK=$(sha256sum /var/www/pmed2/shared/scripts/rollback.sh | awk '{print \$1}')"
+            echo "BACKUP=$(sha256sum /var/www/pmed2/shared/scripts/backup.sh | awk '{print \$1}')"
+          ')"
 
-            expected_deploy='${{ steps.local_hashes.outputs.deploy_sha }}'
-            expected_rollback='${{ steps.local_hashes.outputs.rollback_sha }}'
-            expected_backup='${{ steps.local_hashes.outputs.backup_sha }}'
+          remote_deploy="$(echo "$remote_output" | awk -F= '/^DEPLOY=/{print $2}')"
+          remote_rollback="$(echo "$remote_output" | awk -F= '/^ROLLBACK=/{print $2}')"
+          remote_backup="$(echo "$remote_output" | awk -F= '/^BACKUP=/{print $2}')"
 
-            remote_deploy="$(sha256sum /var/www/pmed2/shared/scripts/deploy.sh | awk '{print $1}')"
-            remote_rollback="$(sha256sum /var/www/pmed2/shared/scripts/rollback.sh | awk '{print $1}')"
-            remote_backup="$(sha256sum /var/www/pmed2/shared/scripts/backup.sh | awk '{print $1}')"
-
-            [[ "$remote_deploy" == "$expected_deploy" ]] || { echo "Hash mismatch: deploy.sh"; exit 1; }
-            [[ "$remote_rollback" == "$expected_rollback" ]] || { echo "Hash mismatch: rollback.sh"; exit 1; }
-            [[ "$remote_backup" == "$expected_backup" ]] || { echo "Hash mismatch: backup.sh"; exit 1; }
-            echo "Integridade ponta a ponta validada (runner x remoto)."
+          [[ "$remote_deploy" == "$expected_deploy" ]] || { echo "Hash mismatch: deploy.sh"; exit 1; }
+          [[ "$remote_rollback" == "$expected_rollback" ]] || { echo "Hash mismatch: rollback.sh"; exit 1; }
+          [[ "$remote_backup" == "$expected_backup" ]] || { echo "Hash mismatch: backup.sh"; exit 1; }
+          echo "Integridade ponta a ponta validada (runner x remoto)."
 
       - name: Executar deploy remoto
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.PMED2_SSH_HOST }}
-          username: ${{ secrets.PMED2_SSH_USER }}
-          key: ${{ secrets.PMED2_SSH_KEY }}
-          script: |
-            /var/www/pmed2/shared/scripts/deploy.sh "${{ github.ref_name }}"
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}" "/var/www/pmed2/shared/scripts/deploy.sh '${{ github.ref_name }}'"
