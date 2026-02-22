@@ -44,6 +44,13 @@ php artisan route:cache || true
 php artisan view:cache || true
 
 ln -sfn "$RELEASE_DIR" "$APP_BASE/current"
-systemctl reload php8.3-fpm
+
+if sudo -n systemctl reload php8.3-fpm 2>/dev/null; then
+  echo "php8.3-fpm recarregado com sudo"
+elif systemctl reload php8.3-fpm 2>/dev/null; then
+  echo "php8.3-fpm recarregado sem sudo"
+else
+  echo "Aviso: não foi possível recarregar php8.3-fpm automaticamente (sudo/systemctl)."
+fi
 
 echo "Deploy concluído: $TAG -> $RELEASE_DIR"
