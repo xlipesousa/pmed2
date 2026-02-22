@@ -32,7 +32,7 @@ else
 fi
 
 mkdir -p "$RELEASE_DIR/bootstrap/cache" "$SHARED/storage"
-chown -R www-data:www-data "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache"
+chown -R www-data:www-data "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
 chmod -R ug+rwX "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache"
 
 "$SCRIPTS/backup.sh"
