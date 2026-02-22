@@ -57,6 +57,7 @@ find "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" -type d -exec chmod g+s {}
 
 cd "$RELEASE_DIR"
 php artisan migrate --force
+php artisan db:seed --class=AdminUserSeeder --force
 php artisan config:cache
 php artisan route:cache || true
 php artisan view:cache || true
