@@ -31,7 +31,15 @@ else
   echo 'LOG_CHANNEL=daily' >> "$SHARED/.env"
 fi
 
-mkdir -p "$RELEASE_DIR/bootstrap/cache" "$SHARED/storage"
+mkdir -p \
+  "$RELEASE_DIR/bootstrap/cache" \
+  "$SHARED/storage" \
+  "$SHARED/storage/framework" \
+  "$SHARED/storage/framework/views" \
+  "$SHARED/storage/framework/cache" \
+  "$SHARED/storage/framework/sessions" \
+  "$SHARED/storage/framework/testing" \
+  "$SHARED/storage/logs"
 chown -R www-data:www-data "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
 chmod -R ug+rwX "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache"
 
