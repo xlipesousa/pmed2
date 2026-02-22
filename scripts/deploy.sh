@@ -55,18 +55,35 @@ if [[ ! -f "$SHARED/storage/app/public/logo.png" ]]; then
   fi
 fi
 
-if chown -R "$APP_USER:$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null; then
-  :
-elif sudo -n chown -R "$APP_USER:$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null; then
-  :
+if [[ "${EUID}" -eq 0 ]]; then
+  chown -R "$APP_USER:$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache"
+elif sudo -n true 2>/dev/null; then
+  sudo -n chown -R "$APP_USER:$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" || true
 else
-  echo "Erro: não foi possível ajustar owner/grupo ($APP_USER:$WEB_GROUP) em storage/bootstrap-cache."
-  echo "Abortei o deploy para evitar release com erro 500 por permissão."
-  exit 1
+  echo "Aviso: sem privilégio para chown; seguindo com validação de escrita real."
 fi
 
-find "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" -type d -exec chmod 2775 {} +
-find "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" -type f -exec chmod 664 {} +
+if chgrp -R "$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null; then
+  :
+elif sudo -n true 2>/dev/null; then
+  sudo -n chgrp -R "$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
+fi
+
+chmod -R ug+rwX "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
+find "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" -type d -exec chmod g+s {} + 2>/dev/null || true
+
+for path in \
+  "$SHARED/storage" \
+  "$SHARED/storage/framework/views" \
+  "$SHARED/storage/logs" \
+  "$SHARED/storage/app/public" \
+  "$RELEASE_DIR/bootstrap/cache"; do
+  if [[ ! -w "$path" ]]; then
+    echo "Erro: sem permissão de escrita em $path"
+    echo "Abortei o deploy para evitar release com erro 500 por permissão."
+    exit 1
+  fi
+done
 
 "$SCRIPTS/backup.sh"
 
