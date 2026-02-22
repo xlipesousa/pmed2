@@ -180,16 +180,20 @@ class ConfiguracoesController extends Controller
         // Processar o logo caso tenha sido enviado
         if ($request->hasFile('novo_logo')) {
             $logo = $request->file('novo_logo');
-            $logoPath = public_path('vendor/adminlte/dist/img/AdminLTELogo.png');
-            
-            // Criar uma cópia de backup do logo atual
-            if (file_exists($logoPath)) {
-                copy($logoPath, public_path('vendor/adminlte/dist/img/AdminLTELogo_backup.png'));
+            $logoDir = storage_path('app/public');
+            $logoPath = $logoDir . '/logo.png';
+            $logoBackupPath = $logoDir . '/logo_backup.png';
+
+            if (!is_dir($logoDir)) {
+                mkdir($logoDir, 0775, true);
             }
-            
-            // Redimensionar e salvar o novo logo
+
+            if (file_exists($logoPath)) {
+                copy($logoPath, $logoBackupPath);
+            }
+
             $img = Image::make($logo->getRealPath());
-            $img->fit(130, 130); // Ajustar para 130x130px
+            $img->fit(130, 130);
             $img->save($logoPath);
         }
         

@@ -11,6 +11,8 @@ BACKUPS="$APP_BASE/backups"
 NOW="$(date +%Y-%m-%d_%H%M%S)"
 RELEASE_DIR="$RELEASES/$NOW"
 ARTIFACT="/tmp/pmed2-${TAG}.zip"
+APP_USER="${APP_USER:-admin21ct}"
+WEB_GROUP="${WEB_GROUP:-www-data}"
 
 mkdir -p "$RELEASES" "$SHARED/storage" "$SCRIPTS" "$BACKUPS"
 
@@ -35,6 +37,7 @@ fi
 mkdir -p \
   "$RELEASE_DIR/bootstrap/cache" \
   "$SHARED/storage" \
+  "$SHARED/storage/app/public" \
   "$SHARED/storage/framework" \
   "$SHARED/storage/framework/views" \
   "$SHARED/storage/framework/cache" \
@@ -42,20 +45,33 @@ mkdir -p \
   "$SHARED/storage/framework/testing" \
   "$SHARED/storage/logs"
 
-if chgrp -R www-data "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null; then
-  :
-elif sudo -n chgrp -R www-data "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null; then
-  :
-else
-  echo "Aviso: não foi possível ajustar grupo para www-data em storage/bootstrap-cache."
+touch "$SHARED/storage/logs/laravel.log"
+
+if [[ ! -f "$SHARED/storage/app/public/logo.png" ]]; then
+  if [[ -f "$RELEASE_DIR/public/img/logo.png" ]]; then
+    cp "$RELEASE_DIR/public/img/logo.png" "$SHARED/storage/app/public/logo.png"
+  elif [[ -f "$RELEASE_DIR/public/vendor/adminlte/dist/img/AdminLTELogo.png" ]]; then
+    cp "$RELEASE_DIR/public/vendor/adminlte/dist/img/AdminLTELogo.png" "$SHARED/storage/app/public/logo.png"
+  fi
 fi
 
-chmod -R ug+rwX "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
-find "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" -type d -exec chmod g+s {} + 2>/dev/null || true
+if chown -R "$APP_USER:$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null; then
+  :
+elif sudo -n chown -R "$APP_USER:$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null; then
+  :
+else
+  echo "Erro: não foi possível ajustar owner/grupo ($APP_USER:$WEB_GROUP) em storage/bootstrap-cache."
+  echo "Abortei o deploy para evitar release com erro 500 por permissão."
+  exit 1
+fi
+
+find "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" -type d -exec chmod 2775 {} +
+find "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" -type f -exec chmod 664 {} +
 
 "$SCRIPTS/backup.sh"
 
 cd "$RELEASE_DIR"
+php artisan storage:link || true
 php artisan migrate --force
 php artisan db:seed --class=AdminUserSeeder --force
 php artisan config:cache
