@@ -86,9 +86,9 @@ jobs:
           remote_output="$(ssh -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}" '
             set -euo pipefail
             ls -l /var/www/pmed2/shared/scripts
-            echo "DEPLOY=$(sha256sum /var/www/pmed2/shared/scripts/deploy.sh | awk '{print \$1}')"
-            echo "ROLLBACK=$(sha256sum /var/www/pmed2/shared/scripts/rollback.sh | awk '{print \$1}')"
-            echo "BACKUP=$(sha256sum /var/www/pmed2/shared/scripts/backup.sh | awk '{print \$1}')"
+            echo "DEPLOY=$(sha256sum /var/www/pmed2/shared/scripts/deploy.sh | cut -d" " -f1)"
+            echo "ROLLBACK=$(sha256sum /var/www/pmed2/shared/scripts/rollback.sh | cut -d" " -f1)"
+            echo "BACKUP=$(sha256sum /var/www/pmed2/shared/scripts/backup.sh | cut -d" " -f1)"
           ')"
 
           remote_deploy="$(echo "$remote_output" | awk -F= '/^DEPLOY=/{print $2}')"
