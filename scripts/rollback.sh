@@ -13,7 +13,14 @@ if [[ -z "${PREV_RELEASE:-}" ]]; then
 fi
 
 ln -sfn "$PREV_RELEASE" "$APP_BASE/current"
-systemctl reload php8.3-fpm
+
+if sudo -n systemctl reload php8.3-fpm 2>/dev/null; then
+  echo "php8.3-fpm recarregado com sudo"
+elif systemctl reload php8.3-fpm 2>/dev/null; then
+  echo "php8.3-fpm recarregado sem sudo"
+else
+  echo "Aviso: não foi possível recarregar php8.3-fpm automaticamente (sudo/systemctl)."
+fi
 
 echo "Rollback concluído para: $PREV_RELEASE"
 echo "Se necessário, execute restore de banco com backup validado."
