@@ -62,7 +62,7 @@ if [[ -z "$CONNECTED_HOST" ]]; then
 fi
 
 DB_HOST="$CONNECTED_HOST"
-mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" | gzip > "$BACKUPS/db_${DB_DATABASE}_${DATE}.sql.gz"
+mysqldump --no-tablespaces -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" | gzip > "$BACKUPS/db_${DB_DATABASE}_${DATE}.sql.gz"
 unset MYSQL_PWD
 
 ls -1t "$BACKUPS"/db_*.sql.gz | tail -n +15 | xargs -r rm -f
