@@ -16,10 +16,8 @@ ln -sfn "$PREV_RELEASE" "$APP_BASE/current"
 
 if sudo -n systemctl reload php8.3-fpm 2>/dev/null; then
   echo "php8.3-fpm recarregado com sudo"
-elif systemctl reload php8.3-fpm 2>/dev/null; then
-  echo "php8.3-fpm recarregado sem sudo"
 else
-  echo "Aviso: não foi possível recarregar php8.3-fpm automaticamente (sudo/systemctl)."
+  echo "Aviso: não foi possível recarregar php8.3-fpm automaticamente (sudo -n)."
 fi
 
 echo "Rollback concluído para: $PREV_RELEASE"
