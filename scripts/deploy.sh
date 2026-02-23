@@ -34,6 +34,13 @@ else
   echo 'LOG_CHANNEL=daily' >> "$SHARED/.env"
 fi
 
+APP_KEY_VALUE="$(grep -E '^APP_KEY=' "$SHARED/.env" | tail -n1 | cut -d'=' -f2- || true)"
+if [[ -z "$APP_KEY_VALUE" || "$APP_KEY_VALUE" == "base64:" || "$APP_KEY_VALUE" == "base64:COLOQUE_AQUI_A_CHAVE" ]]; then
+  echo "Erro: APP_KEY inválida em $SHARED/.env."
+  echo "Defina uma chave real (ex.: php artisan key:generate --show) antes do deploy."
+  exit 1
+fi
+
 mkdir -p \
   "$RELEASE_DIR/bootstrap/cache" \
   "$SHARED/storage" \
