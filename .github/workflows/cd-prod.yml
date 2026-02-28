@@ -31,26 +31,11 @@ jobs:
       - name: Validar pré-requisitos do runner
         run: |
           set -euo pipefail
-          mkdir -p "$HOME/.local/bin"
-          export PATH="$HOME/.local/bin:$PATH"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          command -v php
           command -v zip
           command -v ssh
           command -v scp
-
-          if ! command -v composer >/dev/null 2>&1; then
-            echo "Composer não encontrado no runner; instalando sem sudo em ~/.local/bin..."
-            curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-            php /tmp/composer-setup.php --install-dir="$HOME/.local/bin" --filename=composer
-            rm -f /tmp/composer-setup.php
-          fi
-
-          php -v
-          composer --version
-
-      - name: Install deps (release)
-        run: composer install --no-dev --prefer-dist --no-interaction --no-progress
+          command -v sha256sum
+          command -v curl
 
       - name: Build zip da tag
         run: |
