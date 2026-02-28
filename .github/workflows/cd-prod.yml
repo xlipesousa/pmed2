@@ -20,6 +20,12 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
 
+      - name: Setup PHP 8.3 + Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer
+
       - name: Validar formato da tag
         run: |
           set -euo pipefail
