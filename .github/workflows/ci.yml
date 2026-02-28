@@ -28,10 +28,15 @@ jobs:
       - name: Preparar ambiente de teste
         run: |
           cp .env.example .env
-          php artisan key:generate
+          APP_KEY_VALUE="$(php -r 'echo "base64:".base64_encode(random_bytes(32));')"
+          if grep -q '^APP_KEY=' .env; then
+            sed -i "s#^APP_KEY=.*#APP_KEY=${APP_KEY_VALUE}#" .env
+          else
+            echo "APP_KEY=${APP_KEY_VALUE}" >> .env
+          fi
 
       - name: Testes
-        run: php artisan test
+        run: vendor/bin/phpunit
 
       - name: PHPStan/Larastan
         run: |
