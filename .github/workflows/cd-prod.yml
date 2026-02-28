@@ -31,7 +31,7 @@ jobs:
       - name: Validar pré-requisitos do runner
         run: |
           set -euo pipefail
-          command -v python3
+          command -v git
           command -v ssh
           command -v scp
           command -v sha256sum
@@ -45,24 +45,7 @@ jobs:
             zip -rq "$OUT" . \
               -x ".git/*" "node_modules/*" "storage/logs/*" "storage/framework/*"
           else
-            python3 -c '
-      import os
-      import zipfile
-
-      out = os.path.join("build", "pmed2-${{ inputs.tag }}.zip")
-      exclude_prefixes = (".git/", "node_modules/", "storage/logs/", "storage/framework/")
-
-      with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for root, dirs, files in os.walk("."):
-          rel_root = os.path.relpath(root, ".")
-          rel_root = "" if rel_root == "." else rel_root + "/"
-          dirs[:] = [d for d in dirs if not any((rel_root + d + "/").startswith(p) for p in exclude_prefixes)]
-          for name in files:
-            rel_path = rel_root + name
-            if any(rel_path.startswith(p) for p in exclude_prefixes):
-              continue
-            zf.write(os.path.join(root, name), rel_path)
-      '
+            git archive --format=zip --output "$OUT" HEAD
           fi
 
       - name: Preparar chave SSH de produção
