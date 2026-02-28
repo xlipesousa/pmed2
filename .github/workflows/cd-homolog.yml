@@ -1,4 +1,4 @@
-name: CD
+name: CD Homolog
 
 on:
   push:
@@ -6,8 +6,10 @@ on:
       - "v*.*.*"
 
 jobs:
-  deploy:
-    runs-on: [self-hosted, Linux, X64, pmed2-lab]
+  deploy-homolog:
+    name: Deploy em Homolog
+    runs-on: [self-hosted, Linux, X64, pmed2-interno]
+    environment: homolog
 
     steps:
       - name: Checkout
@@ -29,32 +31,38 @@ jobs:
 
       - name: Build zip da tag
         run: |
+          set -euo pipefail
           mkdir -p build
           zip -rq "build/pmed2-${{ github.ref_name }}.zip" . \
             -x ".git/*" "node_modules/*" "storage/logs/*" "storage/framework/*"
 
-      - name: Preparar chave SSH
+      - name: Preparar chave SSH de homolog
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          cat > ~/.ssh/pmed2_cd <<'EOF'
-          ${{ secrets.PMED2_SSH_KEY }}
+          cat > ~/.ssh/pmed2_homolog <<'EOF'
+          ${{ secrets.PMED2_HOM_SSH_KEY }}
           EOF
-          chmod 600 ~/.ssh/pmed2_cd
-          ssh-keyscan -H "${{ secrets.PMED2_SSH_HOST }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/pmed2_homolog
+          ssh-keyscan -H "${{ secrets.PMED2_HOM_SSH_HOST }}" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-      - name: Enviar zip para servidor
+      - name: Testar SSH (homolog)
         run: |
           set -euo pipefail
-          scp -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes build/*.zip "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}:/tmp/"
+          ssh -i ~/.ssh/pmed2_homolog -o BatchMode=yes -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" "hostname && whoami"
 
-      - name: Enviar scripts para servidor
+      - name: Enviar zip para homolog
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}" "mkdir -p /tmp/pmed2-scripts/scripts"
-          scp -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes scripts/deploy.sh scripts/rollback.sh scripts/backup.sh "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}:/tmp/pmed2-scripts/scripts/"
+          scp -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes build/*.zip "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}:/tmp/"
+
+      - name: Enviar scripts para homolog
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" "mkdir -p /tmp/pmed2-scripts/scripts"
+          scp -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes scripts/deploy.sh scripts/rollback.sh scripts/backup.sh "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}:/tmp/pmed2-scripts/scripts/"
 
       - name: Calcular hashes locais dos scripts
         id: local_hashes
@@ -64,10 +72,10 @@ jobs:
           echo "rollback_sha=$(sha256sum scripts/rollback.sh | awk '{print $1}')" >> "$GITHUB_OUTPUT"
           echo "backup_sha=$(sha256sum scripts/backup.sh | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
-      - name: Instalar scripts na pasta shared
+      - name: Instalar scripts na pasta shared (homolog)
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}" '
+          ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" '
             set -euo pipefail
             mkdir -p /var/www/pmed2/shared/scripts
             cp -f /tmp/pmed2-scripts/scripts/deploy.sh /var/www/pmed2/shared/scripts/deploy.sh
@@ -83,7 +91,7 @@ jobs:
           expected_rollback='${{ steps.local_hashes.outputs.rollback_sha }}'
           expected_backup='${{ steps.local_hashes.outputs.backup_sha }}'
 
-          remote_output="$(ssh -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}" '
+          remote_output="$(ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" '
             set -euo pipefail
             ls -l /var/www/pmed2/shared/scripts
             echo "DEPLOY=$(sha256sum /var/www/pmed2/shared/scripts/deploy.sh | cut -d" " -f1)"
@@ -98,9 +106,18 @@ jobs:
           [[ "$remote_deploy" == "$expected_deploy" ]] || { echo "Hash mismatch: deploy.sh"; exit 1; }
           [[ "$remote_rollback" == "$expected_rollback" ]] || { echo "Hash mismatch: rollback.sh"; exit 1; }
           [[ "$remote_backup" == "$expected_backup" ]] || { echo "Hash mismatch: backup.sh"; exit 1; }
-          echo "Integridade ponta a ponta validada (runner x remoto)."
+          echo "Integridade ponta a ponta validada (runner x homolog)."
 
-      - name: Executar deploy remoto
+      - name: Executar deploy remoto (homolog)
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pmed2_cd -o StrictHostKeyChecking=yes "${{ secrets.PMED2_SSH_USER }}@${{ secrets.PMED2_SSH_HOST }}" "/var/www/pmed2/shared/scripts/deploy.sh '${{ github.ref_name }}'"
+          ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" "/var/www/pmed2/shared/scripts/deploy.sh '${{ github.ref_name }}'"
+
+      - name: Healthcheck pós-deploy (homolog)
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" '
+            set -euo pipefail
+            curl -fsS http://127.0.0.1/health >/dev/null
+            curl -I http://127.0.0.1/login | head -n 1
+          '
