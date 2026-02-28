@@ -73,9 +73,12 @@ if [[ ! -f "$SHARED/storage/app/public/logo.png" ]]; then
   fi
 fi
 
+can_fix_ownership="false"
 if [[ "${EUID}" -eq 0 ]]; then
+  can_fix_ownership="true"
   chown -R "$APP_USER:$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache"
 elif sudo -n true 2>/dev/null; then
+  can_fix_ownership="true"
   sudo -n chown -R "$APP_USER:$WEB_GROUP" "$SHARED/storage" "$RELEASE_DIR/bootstrap/cache" || true
 else
   echo "Aviso: sem privilégio para chown; seguindo com validação de escrita real."
@@ -117,9 +120,14 @@ for path in \
 
   group_name="$(stat -c %G "$path")"
   if [[ "$group_name" != "$WEB_GROUP" ]]; then
-    echo "Erro: grupo de $path é '$group_name' e deveria ser '$WEB_GROUP'."
-    echo "Ajuste ownership/grupo para o runtime web antes do deploy."
-    exit 1
+    if [[ "$can_fix_ownership" == "true" ]]; then
+      echo "Erro: grupo de $path é '$group_name' e deveria ser '$WEB_GROUP'."
+      echo "Ajuste ownership/grupo para o runtime web antes do deploy."
+      exit 1
+    fi
+
+    echo "Aviso: grupo de $path é '$group_name' (esperado '$WEB_GROUP'),"
+    echo "mas sem privilégio de ajuste neste host; seguindo e validando por healthcheck."
   fi
 done
 
