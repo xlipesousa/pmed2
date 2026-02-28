@@ -23,7 +23,7 @@ jobs:
         run: composer validate --no-check-publish
 
       - name: Install deps (com dev)
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
 
       - name: Preparar ambiente de teste
         run: |
@@ -63,7 +63,7 @@ jobs:
           tools: composer
 
       - name: Install deps (release)
-        run: composer install --no-dev --prefer-dist --no-interaction --no-progress
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts
 
       - name: Build zip de release
         run: |
