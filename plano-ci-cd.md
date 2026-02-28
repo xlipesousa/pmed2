@@ -60,7 +60,7 @@ Resultado esperado: hostname e usuário retornam sem erro.
 
 1. Instalar dependências:
 ```bash
-sudo apt update && sudo apt -y install git curl unzip openssh-client ca-certificates
+sudo apt update && sudo apt -y install git curl unzip zip openssh-client ca-certificates php8.3-cli composer
 ```
 
 2. Criar diretório do runner:
@@ -87,6 +87,21 @@ sudo ./svc.sh status
 ```
 
 Resultado esperado: status `active` e runner online no GitHub.
+
+6. Validar pré-requisitos do runner (igual ao workflow):
+```bash
+command -v php
+command -v composer
+command -v zip
+command -v ssh
+command -v scp
+php -v
+composer --version
+```
+
+Regra importante:
+- em runner self-hosted, evite actions que executam `sudo` e pedem senha (não há terminal interativo no job);
+- o runner deve ter ferramentas base já instaladas no bootstrap.
 
 ---
 

@@ -15,20 +15,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup PHP 8.3 + Composer
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-          tools: composer
-
       - name: Validar pré-requisitos do runner
         run: |
           set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           command -v php
-          command -v composer
           command -v zip
           command -v ssh
           command -v scp
+
+          if ! command -v composer >/dev/null 2>&1; then
+            echo "Composer não encontrado no runner; instalando sem sudo em ~/.local/bin..."
+            curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+            php /tmp/composer-setup.php --install-dir="$HOME/.local/bin" --filename=composer
+            rm -f /tmp/composer-setup.php
+          fi
+
           php -v
           composer --version
 
