@@ -179,6 +179,7 @@ $RECYCLE.BIN/
 *.tmp
 *.temp
 *.log
+actions/
 
 # Arquivos de análise local
 git.txt
