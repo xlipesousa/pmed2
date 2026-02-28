@@ -430,3 +430,39 @@ Quando quiser migrar para GitLab, mantenha:
 - mesma política de aprovação para produção.
 
 Troca apenas o orquestrador da pipeline.
+
+---
+
+## 14) Manutenção de dependências e auditoria (rotina curta)
+
+Use este ciclo quando o `composer audit` apontar vulnerabilidades.
+
+### 14.1 [ubuntu-dev] Abrir branch de manutenção
+
+```bash
+cd /home/admin21ct/pmed2
+git checkout main && git pull
+git checkout -b chore/deps-audit-$(date +%Y%m%d)
+```
+
+### 14.2 [ubuntu-dev] Atualizar pacotes afetados (controlado)
+
+```bash
+composer update <pacote1> <pacote2> -W --no-interaction --no-progress --no-scripts --no-install
+composer install --no-interaction --no-progress --no-scripts
+composer audit --no-interaction
+php artisan test
+```
+
+### 14.3 [ubuntu-dev] Publicar para PR
+
+```bash
+git add composer.lock composer.json
+git commit -m "chore(deps): atualização de segurança via composer audit"
+git push -u origin HEAD
+```
+
+Resultado esperado:
+- `composer audit` sem advisories;
+- testes verdes;
+- PR aberta e CI validando automaticamente.
