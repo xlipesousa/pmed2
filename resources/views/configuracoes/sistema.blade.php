@@ -442,6 +442,41 @@
             </div>
         </div>
 
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Pesos do Score de Desempenho</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">Defina os pesos relativos de cada eixo para o cálculo do score operacional. A soma não precisa ser 100 (o sistema normaliza automaticamente).</p>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="desempenho_peso_volume">Volume</label>
+                            <input type="number" step="0.01" min="0" max="100" class="form-control" id="desempenho_peso_volume" name="desempenho_peso_volume" value="{{ old('desempenho_peso_volume', $pesosDesempenho['volume'] ?? 25) }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="desempenho_peso_tempo">Tempo</label>
+                            <input type="number" step="0.01" min="0" max="100" class="form-control" id="desempenho_peso_tempo" name="desempenho_peso_tempo" value="{{ old('desempenho_peso_tempo', $pesosDesempenho['tempo'] ?? 25) }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="desempenho_peso_qualidade">Qualidade</label>
+                            <input type="number" step="0.01" min="0" max="100" class="form-control" id="desempenho_peso_qualidade" name="desempenho_peso_qualidade" value="{{ old('desempenho_peso_qualidade', $pesosDesempenho['qualidade'] ?? 25) }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="desempenho_peso_retrabalho">Retrabalho</label>
+                            <input type="number" step="0.01" min="0" max="100" class="form-control" id="desempenho_peso_retrabalho" name="desempenho_peso_retrabalho" value="{{ old('desempenho_peso_retrabalho', $pesosDesempenho['retrabalho'] ?? 25) }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="text-right mb-4">
             <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar Configurações</button>
             <button type="reset" class="btn btn-secondary"><i class="fas fa-undo"></i> Restaurar Padrões</button>

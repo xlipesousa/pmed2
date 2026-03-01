@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pacote;
 use Illuminate\Http\Request;
 
 class PacoteController extends Controller

@@ -9,6 +9,7 @@ use App\Models\TipoPacote;
 use App\Models\TipoConta;
 use App\Models\MotivoGlosa;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class PesquisaController extends Controller
@@ -808,7 +809,7 @@ class PesquisaController extends Controller
 
             return redirect()->back()->with('success', 'Pesquisa salva com sucesso!');
         } catch (\Exception $e) {
-            \Log::error('Erro ao salvar pesquisa: ' . $e->getMessage());
+            Log::error('Erro ao salvar pesquisa: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Ocorreu um erro ao salvar a pesquisa. Por favor, tente novamente.');
         }
     }

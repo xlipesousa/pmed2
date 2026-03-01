@@ -7,12 +7,15 @@ use App\Models\MotivoGlosa;
 use App\Models\Movimentacao;
 use App\Models\OcsPsa;
 use App\Models\Pacote;
+use App\Models\Configuracao;
 use App\Models\TipoConta;
 use App\Models\TipoPacote;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class GraficoController extends Controller
 {
@@ -85,7 +88,7 @@ class GraficoController extends Controller
                 'tempo_medio_dias' => round($tempoMedioDias, 1)
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar KPIs: " . $e->getMessage());
+            Log::error("Erro ao carregar KPIs: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -188,7 +191,7 @@ class GraficoController extends Controller
                 'gargalos' => $gargalos
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar dados de fluxo: " . $e->getMessage());
+            Log::error("Erro ao carregar dados de fluxo: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -275,7 +278,7 @@ class GraficoController extends Controller
                 'colors' => $colors // Importante: retornar as cores definidas!
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar dados de status: " . $e->getMessage());
+            Log::error("Erro ao carregar dados de status: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -349,7 +352,7 @@ class GraficoController extends Controller
                 'saidas' => $saidas
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar dados de tendência: " . $e->getMessage());
+            Log::error("Erro ao carregar dados de tendência: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -397,7 +400,7 @@ class GraficoController extends Controller
                 'values' => $values
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar dados de volume: " . $e->getMessage());
+            Log::error("Erro ao carregar dados de volume: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -444,7 +447,7 @@ class GraficoController extends Controller
                 'values' => $values
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar dados de tipo: " . $e->getMessage());
+            Log::error("Erro ao carregar dados de tipo: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -567,7 +570,7 @@ class GraficoController extends Controller
                 'tipo_conta' => $tipoContaData
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar dados financeiros: " . $e->getMessage());
+            Log::error("Erro ao carregar dados financeiros: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -706,7 +709,7 @@ class GraficoController extends Controller
                 'tendencia_glosa' => $tendencia
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar dados de glosas: " . $e->getMessage());
+            Log::error("Erro ao carregar dados de glosas: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -881,7 +884,7 @@ class GraficoController extends Controller
                 'meta_realizado' => $metaRealizado
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar dados de performance: " . $e->getMessage());
+            Log::error("Erro ao carregar dados de performance: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -889,118 +892,26 @@ class GraficoController extends Controller
     public function desempenho(Request $request)
     {
         try {
-            $query = DB::table('movimentacoes_pacote as mp')
-                ->join('users as u', 'u.id', '=', 'mp.usuario_id')
-                ->join('pacotes as p', 'p.id', '=', 'mp.pacote_id')
-                ->leftJoin('movimentacoes_pacote as mp2', function ($join) {
-                    $join->on('mp2.pacote_id', '=', 'mp.pacote_id')
-                        ->whereRaw('mp2.id = (select min(m3.id) from movimentacoes_pacote m3 where m3.pacote_id = mp.pacote_id and m3.id > mp.id)');
-                })
-                ->whereNotNull('mp.usuario_id');
-
-            if ($request->filled('periodo')) {
-                [$dataInicio, $dataFim] = explode(' - ', $request->periodo);
-                $dataInicio = Carbon::createFromFormat('d/m/Y', $dataInicio)->startOfDay();
-                $dataFim = Carbon::createFromFormat('d/m/Y', $dataFim)->endOfDay();
-                $query->whereBetween('mp.created_at', [$dataInicio, $dataFim]);
-            }
-
-            if ($request->filled('ocs_psa_id') && $request->ocs_psa_id !== 'todos') {
-                $query->where('p.ocs_psa_id', $request->ocs_psa_id);
-            }
-
-            if ($request->filled('tipo_id') && $request->tipo_id !== 'todos') {
-                $query->where('p.tipo_id', $request->tipo_id);
-            }
-
-            if ($request->filled('tipo_conta_id') && $request->tipo_conta_id !== 'todos') {
-                $query->where('p.tipo_conta_id', $request->tipo_conta_id);
-            }
-
-            if ($request->filled('estado_glosa') && $request->estado_glosa !== 'todos') {
-                $query->where('p.estado_glosa', $request->estado_glosa);
-            }
-
-            $dadosBrutos = $query
-                ->select(
-                    'u.id as usuario_id',
-                    'u.name as usuario_nome',
-                    DB::raw('COUNT(mp.id) as total_movimentacoes'),
-                    DB::raw("SUM(CASE WHEN LOWER(CONCAT(COALESCE(mp.acao, ''), ' ', COALESCE(mp.mensagem, ''), ' ', COALESCE(mp.observacao, ''))) REGEXP '(retrabalho|reprocess(amento|ar)?|corre(c|ç)(a|ã)o( de)?|devolu(c|ç)(a|ã)o para corre(c|ç)(a|ã)o|rean[aá]lise|ajuste de inconsist[êe]ncia|retornad[oa] para corre(c|ç)(a|ã)o)' THEN 1 ELSE 0 END) as total_retrabalho"),
-                    DB::raw('AVG(CASE WHEN mp2.created_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, mp.created_at, mp2.created_at) END) as tempo_medio_horas')
-                )
-                ->groupBy('u.id', 'u.name')
-                ->get();
-
-            if ($dadosBrutos->isEmpty()) {
-                return response()->json([
-                    'kpis' => [
-                        'media_score' => 0,
-                        'melhor_colaborador' => ['nome' => '-', 'score' => 0],
-                        'total_colaboradores' => 0,
-                        'total_movimentacoes' => 0,
-                        'retrabalho_medio' => 0,
-                    ],
-                    'ranking' => ['labels' => [], 'values' => []],
-                    'eixos' => [
-                        'labels' => [],
-                        'volume' => [],
-                        'tempo' => [],
-                        'qualidade' => [],
-                        'retrabalho' => [],
-                    ],
-                    'retrabalho' => ['labels' => [], 'values' => []],
-                ]);
-            }
-
-            $metricas = $dadosBrutos->map(function ($item) {
-                $totalMovimentacoes = (int) $item->total_movimentacoes;
-                $totalRetrabalho = (int) $item->total_retrabalho;
-                $taxaRetrabalho = $totalMovimentacoes > 0 ? ($totalRetrabalho / $totalMovimentacoes) * 100 : 0;
-
-                return [
-                    'nome' => $item->usuario_nome,
-                    'volume_bruto' => $totalMovimentacoes,
-                    'tempo_bruto' => max(0, (float) ($item->tempo_medio_horas ?? 0)),
-                    'taxa_retrabalho' => round($taxaRetrabalho, 2),
-                    'qualidade_bruta' => round(100 - $taxaRetrabalho, 2),
-                ];
-            });
-
-            $maxVolume = max(1, (int) $metricas->max('volume_bruto'));
-            $maxTempo = (float) $metricas->max('tempo_bruto');
-            $minTempo = (float) $metricas->min('tempo_bruto');
-
-            $scored = $metricas->map(function ($item) use ($maxVolume, $maxTempo, $minTempo) {
-                $scoreVolume = round(($item['volume_bruto'] / $maxVolume) * 100, 1);
-
-                if ($maxTempo == $minTempo) {
-                    $scoreTempo = $item['tempo_bruto'] > 0 ? 100 : 0;
-                } else {
-                    $scoreTempo = round((($maxTempo - $item['tempo_bruto']) / ($maxTempo - $minTempo)) * 100, 1);
-                }
-
-                $scoreQualidade = round($item['qualidade_bruta'], 1);
-                $scoreRetrabalho = round(100 - $item['taxa_retrabalho'], 1);
-                $scoreOperacional = round(($scoreVolume + $scoreTempo + $scoreQualidade + $scoreRetrabalho) / 4, 1);
-
-                return [
-                    'nome' => $item['nome'],
-                    'score_operacional' => $scoreOperacional,
-                    'scores' => [
-                        'volume' => $scoreVolume,
-                        'tempo' => $scoreTempo,
-                        'qualidade' => $scoreQualidade,
-                        'retrabalho' => $scoreRetrabalho,
-                    ],
-                    'taxa_retrabalho' => $item['taxa_retrabalho'],
-                    'volume_bruto' => $item['volume_bruto'],
-                ];
-            })->sortByDesc('score_operacional')->values();
+            $pesos = $this->obterPesosDesempenho();
+            $scored = $this->calcularDesempenhoPorColaborador($request, null, null, $pesos);
 
             $topRanking = $scored->take(10)->values();
             $topEixos = $scored->take(5)->values();
             $melhor = $scored->first();
+
+            $historicoMensal = [
+                'labels' => [],
+                'valores' => [],
+            ];
+
+            for ($i = 5; $i >= 0; $i--) {
+                $inicioMes = Carbon::now()->subMonths($i)->startOfMonth();
+                $fimMes = Carbon::now()->subMonths($i)->endOfMonth();
+                $historicoMensal['labels'][] = $inicioMes->format('m/Y');
+
+                $desempenhoMes = $this->calcularDesempenhoPorColaborador($request, $inicioMes, $fimMes, $pesos);
+                $historicoMensal['valores'][] = round((float) ($desempenhoMes->avg('score_operacional') ?? 0), 1);
+            }
 
             return response()->json([
                 'kpis' => [
@@ -1012,6 +923,7 @@ class GraficoController extends Controller
                     'total_colaboradores' => $scored->count(),
                     'total_movimentacoes' => (int) $scored->sum('volume_bruto'),
                     'retrabalho_medio' => round($scored->avg('taxa_retrabalho'), 1),
+                    'pesos' => $pesos,
                 ],
                 'ranking' => [
                     'labels' => $topRanking->pluck('nome')->toArray(),
@@ -1028,11 +940,221 @@ class GraficoController extends Controller
                     'labels' => $topRanking->pluck('nome')->toArray(),
                     'values' => $topRanking->pluck('taxa_retrabalho')->toArray(),
                 ],
+                'historico_mensal' => $historicoMensal,
             ]);
         } catch (\Exception $e) {
-            \Log::error("Erro ao carregar dados de desempenho: " . $e->getMessage());
+            Log::error("Erro ao carregar dados de desempenho: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function exportarDesempenho(Request $request, $tipo)
+    {
+        try {
+            $pesos = $this->obterPesosDesempenho();
+            $scored = $this->calcularDesempenhoPorColaborador($request, null, null, $pesos)->take(50)->values();
+
+            $dados = [
+                'gerado_em' => now()->format('d/m/Y H:i:s'),
+                'pesos' => $pesos,
+                'itens' => $scored->toArray(),
+            ];
+
+            if ($tipo === 'csv') {
+                return $this->exportarDesempenhoCsv($dados);
+            }
+
+            if ($tipo === 'pdf') {
+                return $this->exportarDesempenhoPdf($dados);
+            }
+
+            return response()->json(['error' => 'Formato não suportado para desempenho'], 400);
+        } catch (\Exception $e) {
+            Log::error('Erro ao exportar desempenho: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    private function exportarDesempenhoCsv(array $dados)
+    {
+        $nomeArquivo = 'desempenho-' . now()->format('Ymd') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $nomeArquivo . '"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $handle = fopen('php://temp', 'r+');
+        fputcsv($handle, ['Relatório de Desempenho Operacional']);
+        fputcsv($handle, ['Gerado em', $dados['gerado_em']]);
+        fputcsv($handle, ['Pesos', 'Volume=' . $dados['pesos']['volume'] . '% | Tempo=' . $dados['pesos']['tempo'] . '% | Qualidade=' . $dados['pesos']['qualidade'] . '% | Retrabalho=' . $dados['pesos']['retrabalho'] . '%']);
+        fputcsv($handle, ['']);
+        fputcsv($handle, ['Colaborador', 'Score Operacional', 'Volume', 'Tempo', 'Qualidade', 'Retrabalho', 'Taxa Retrabalho (%)', 'Movimentações']);
+
+        foreach ($dados['itens'] as $item) {
+            fputcsv($handle, [
+                $item['nome'],
+                $item['score_operacional'],
+                $item['scores']['volume'] ?? 0,
+                $item['scores']['tempo'] ?? 0,
+                $item['scores']['qualidade'] ?? 0,
+                $item['scores']['retrabalho'] ?? 0,
+                $item['taxa_retrabalho'] ?? 0,
+                $item['volume_bruto'] ?? 0,
+            ]);
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($csv, 200, $headers);
+    }
+
+    private function exportarDesempenhoPdf(array $dados)
+    {
+        $pdf = Pdf::loadView('graficos.export.desempenho_pdf', [
+            'dados' => $dados,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('desempenho-' . now()->format('Ymd') . '.pdf');
+    }
+
+    private function obterPesosDesempenho(): array
+    {
+        $pesos = [
+            'volume' => Configuracao::obterValorNumerico('desempenho_peso_volume', 25),
+            'tempo' => Configuracao::obterValorNumerico('desempenho_peso_tempo', 25),
+            'qualidade' => Configuracao::obterValorNumerico('desempenho_peso_qualidade', 25),
+            'retrabalho' => Configuracao::obterValorNumerico('desempenho_peso_retrabalho', 25),
+        ];
+
+        $soma = array_sum($pesos);
+        if ($soma <= 0) {
+            return [
+                'volume' => 25,
+                'tempo' => 25,
+                'qualidade' => 25,
+                'retrabalho' => 25,
+            ];
+        }
+
+        return [
+            'volume' => round(($pesos['volume'] / $soma) * 100, 2),
+            'tempo' => round(($pesos['tempo'] / $soma) * 100, 2),
+            'qualidade' => round(($pesos['qualidade'] / $soma) * 100, 2),
+            'retrabalho' => round(($pesos['retrabalho'] / $soma) * 100, 2),
+        ];
+    }
+
+    private function calcularDesempenhoPorColaborador(Request $request, ?Carbon $intervaloInicio = null, ?Carbon $intervaloFim = null, ?array $pesos = null)
+    {
+        $pesos = $pesos ?? $this->obterPesosDesempenho();
+
+        $query = DB::table('movimentacoes_pacote as mp')
+            ->join('users as u', 'u.id', '=', 'mp.usuario_id')
+            ->join('pacotes as p', 'p.id', '=', 'mp.pacote_id')
+            ->leftJoin('movimentacoes_pacote as mp2', function ($join) {
+                $join->on('mp2.pacote_id', '=', 'mp.pacote_id')
+                    ->whereRaw('mp2.id = (select min(m3.id) from movimentacoes_pacote m3 where m3.pacote_id = mp.pacote_id and m3.id > mp.id)');
+            })
+            ->whereNotNull('mp.usuario_id');
+
+        if ($intervaloInicio && $intervaloFim) {
+            $query->whereBetween('mp.created_at', [$intervaloInicio, $intervaloFim]);
+        } elseif ($request->filled('periodo')) {
+            [$dataInicio, $dataFim] = explode(' - ', $request->periodo);
+            $dataInicio = Carbon::createFromFormat('d/m/Y', $dataInicio)->startOfDay();
+            $dataFim = Carbon::createFromFormat('d/m/Y', $dataFim)->endOfDay();
+            $query->whereBetween('mp.created_at', [$dataInicio, $dataFim]);
+        }
+
+        if ($request->filled('ocs_psa_id') && $request->ocs_psa_id !== 'todos') {
+            $query->where('p.ocs_psa_id', $request->ocs_psa_id);
+        }
+
+        if ($request->filled('tipo_id') && $request->tipo_id !== 'todos') {
+            $query->where('p.tipo_id', $request->tipo_id);
+        }
+
+        if ($request->filled('tipo_conta_id') && $request->tipo_conta_id !== 'todos') {
+            $query->where('p.tipo_conta_id', $request->tipo_conta_id);
+        }
+
+        if ($request->filled('estado_glosa') && $request->estado_glosa !== 'todos') {
+            $query->where('p.estado_glosa', $request->estado_glosa);
+        }
+
+        $dadosBrutos = $query
+            ->select(
+                'u.id as usuario_id',
+                'u.name as usuario_nome',
+                DB::raw('COUNT(mp.id) as total_movimentacoes'),
+                DB::raw("SUM(CASE WHEN LOWER(CONCAT(COALESCE(mp.acao, ''), ' ', COALESCE(mp.mensagem, ''), ' ', COALESCE(mp.observacao, ''))) REGEXP '(retrabalho|reprocess(amento|ar)?|corre(c|ç)(a|ã)o( de)?|devolu(c|ç)(a|ã)o para corre(c|ç)(a|ã)o|rean[aá]lise|ajuste de inconsist[êe]ncia|retornad[oa] para corre(c|ç)(a|ã)o)' THEN 1 ELSE 0 END) as total_retrabalho"),
+                DB::raw('AVG(CASE WHEN mp2.created_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, mp.created_at, mp2.created_at) END) as tempo_medio_horas')
+            )
+            ->groupBy('u.id', 'u.name')
+            ->get();
+
+        if ($dadosBrutos->isEmpty()) {
+            return collect();
+        }
+
+        $metricas = $dadosBrutos->map(function ($item) {
+            $totalMovimentacoes = (int) $item->total_movimentacoes;
+            $totalRetrabalho = (int) $item->total_retrabalho;
+            $taxaRetrabalho = $totalMovimentacoes > 0 ? ($totalRetrabalho / $totalMovimentacoes) * 100 : 0;
+
+            return [
+                'nome' => $item->usuario_nome,
+                'volume_bruto' => $totalMovimentacoes,
+                'tempo_bruto' => max(0, (float) ($item->tempo_medio_horas ?? 0)),
+                'taxa_retrabalho' => round($taxaRetrabalho, 2),
+                'qualidade_bruta' => round(100 - $taxaRetrabalho, 2),
+            ];
+        });
+
+        $maxVolume = max(1, (int) $metricas->max('volume_bruto'));
+        $maxTempo = (float) $metricas->max('tempo_bruto');
+        $minTempo = (float) $metricas->min('tempo_bruto');
+
+        return $metricas->map(function ($item) use ($maxVolume, $maxTempo, $minTempo, $pesos) {
+            $scoreVolume = round(($item['volume_bruto'] / $maxVolume) * 100, 1);
+
+            if ($maxTempo == $minTempo) {
+                $scoreTempo = $item['tempo_bruto'] > 0 ? 100 : 0;
+            } else {
+                $scoreTempo = round((($maxTempo - $item['tempo_bruto']) / ($maxTempo - $minTempo)) * 100, 1);
+            }
+
+            $scoreQualidade = round($item['qualidade_bruta'], 1);
+            $scoreRetrabalho = round(100 - $item['taxa_retrabalho'], 1);
+
+            $scoreOperacional = round(
+                (
+                    ($scoreVolume * $pesos['volume']) +
+                    ($scoreTempo * $pesos['tempo']) +
+                    ($scoreQualidade * $pesos['qualidade']) +
+                    ($scoreRetrabalho * $pesos['retrabalho'])
+                ) / 100,
+                1
+            );
+
+            return [
+                'nome' => $item['nome'],
+                'score_operacional' => $scoreOperacional,
+                'scores' => [
+                    'volume' => $scoreVolume,
+                    'tempo' => $scoreTempo,
+                    'qualidade' => $scoreQualidade,
+                    'retrabalho' => $scoreRetrabalho,
+                ],
+                'taxa_retrabalho' => $item['taxa_retrabalho'],
+                'volume_bruto' => $item['volume_bruto'],
+            ];
+        })->sortByDesc('score_operacional')->values();
     }
 
     public function exportar($tipo)
@@ -1136,7 +1258,7 @@ class GraficoController extends Controller
                     return response()->json(['error' => 'Formato não suportado'], 400);
             }
         } catch (\Exception $e) {
-            \Log::error("Erro ao exportar dados: " . $e->getMessage());
+            Log::error("Erro ao exportar dados: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

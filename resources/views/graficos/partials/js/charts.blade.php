@@ -1116,6 +1116,47 @@ function renderizarDesempenhoRetrabalho(data) {
     });
 }
 
+function renderizarDesempenhoHistorico(data) {
+    const ctx = document.getElementById('desempenhoHistoricoChart');
+    if (!ctx) {
+        console.error('Elemento desempenhoHistoricoChart não encontrado!');
+        return;
+    }
+
+    const context = ctx.getContext('2d');
+
+    if (charts.desempenhoHistoricoChart) {
+        charts.desempenhoHistoricoChart.destroy();
+    }
+
+    charts.desempenhoHistoricoChart = new Chart(context, {
+        type: 'line',
+        data: {
+            labels: data.labels || [],
+            datasets: [{
+                label: 'Score Médio Mensal',
+                data: data.valores || [],
+                borderColor: '#27ae60',
+                backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }]
+            }
+        }
+    });
+}
+
 // Adicionar as funções de renderização de gráficos de fluxo
 function renderizarGraficoTempoEtapa(data) {
     const canvas = document.getElementById('tempoEtapaChart');

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OcsPsa;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route; // Adicionar essa importação
+use Illuminate\Support\Facades\Log;
 
 class OcsPsaController extends Controller
 {
@@ -115,7 +115,7 @@ class OcsPsaController extends Controller
                 'ativo' => $ocsPsa->ativo
             ]);
         } catch (\Exception $e) {
-            \Log::error('Erro ao alternar status de OCS/PSA: ' . $e->getMessage());
+            Log::error('Erro ao alternar status de OCS/PSA: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao atualizar status'

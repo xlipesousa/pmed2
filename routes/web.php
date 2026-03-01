@@ -161,6 +161,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/glosas', [App\Http\Controllers\GraficoController::class, 'glosas'])->name('graficos.glosas');
         Route::get('/performance', [App\Http\Controllers\GraficoController::class, 'performance'])->name('graficos.performance');
         Route::get('/desempenho', [App\Http\Controllers\GraficoController::class, 'desempenho'])->name('graficos.desempenho');
+        Route::get('/desempenho/exportar/{tipo}', [App\Http\Controllers\GraficoController::class, 'exportarDesempenho'])->name('graficos.desempenho.exportar');
         Route::get('/exportar/{tipo}', [App\Http\Controllers\GraficoController::class, 'exportar'])->name('graficos.exportar');
     });
 

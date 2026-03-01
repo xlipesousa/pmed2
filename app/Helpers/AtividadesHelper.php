@@ -10,6 +10,20 @@ use Illuminate\Support\Facades\DB;
 
 class AtividadesHelper
 {
+    public static function registrar($pacoteId, $acao, $mensagem, $observacao = null, $usuarioId = null)
+    {
+        return MovimentacaoPacote::create([
+            'pacote_id' => $pacoteId,
+            'acao' => $acao,
+            'mensagem' => $mensagem,
+            'observacao' => $observacao,
+            'localizacao_pos_acao' => 'Sistema',
+            'estado_geral' => 'Normal',
+            'estado_glosa' => 'pendente',
+            'usuario_id' => $usuarioId ?? auth()->id() ?? 1,
+        ]);
+    }
+
     /**
      * Retorna as atividades recentes do sistema
      *

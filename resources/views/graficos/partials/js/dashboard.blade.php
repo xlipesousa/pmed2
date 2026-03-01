@@ -144,7 +144,11 @@ function obterFiltros() {
         ocs_psa_id: $('#filtro-ocspsa').val(),
         tipo_id: $('#filtro-tipo').val(),
         tipo_conta_id: $('#filtro-tipo-conta').val(),
-        estado_glosa: $('#filtro-estado-glosa').val()
+        estado_glosa: $('#filtro-estado-glosa').val(),
+        peso_volume: $('#filtro-peso-volume').val(),
+        peso_tempo: $('#filtro-peso-tempo').val(),
+        peso_qualidade: $('#filtro-peso-qualidade').val(),
+        peso_retrabalho: $('#filtro-peso-retrabalho').val()
     };
 }
 

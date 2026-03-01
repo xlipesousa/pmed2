@@ -97,3 +97,31 @@
         </div>
     </div>
 </div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-success">
+                <h3 class="card-title"><i class="fas fa-chart-line mr-1"></i> Histórico Mensal do Score Médio</h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="desempenhoHistoricoChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    <a href="#" class="btn btn-sm btn-outline-primary" id="btn-exportar-desempenho-csv">
+                        <i class="fas fa-file-csv mr-1"></i> Exportar Desempenho CSV
+                    </a>
+                    <a href="#" class="btn btn-sm btn-outline-danger" id="btn-exportar-desempenho-pdf">
+                        <i class="fas fa-file-pdf mr-1"></i> Exportar Desempenho PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

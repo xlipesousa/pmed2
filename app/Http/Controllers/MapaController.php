@@ -8,6 +8,7 @@ use App\Models\MapaPacote;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class MapaController extends Controller
 {
@@ -248,7 +249,7 @@ class MapaController extends Controller
         });
         
         if ($formato === 'pdf') {
-            $pdf = PDF::loadView('mapas.exportar-pdf', compact('mapa', 'totalPago'));
+            $pdf = Pdf::loadView('mapas.exportar-pdf', compact('mapa', 'totalPago'));
             return $pdf->download('mapa-' . $mapa->numero_mapa . '.pdf');
         }
         
@@ -332,7 +333,7 @@ class MapaController extends Controller
         });
         
         if ($formato === 'pdf') {
-            $pdf = PDF::loadView('mapas.fatura-exportar-pdf', compact('pacote', 'totalPago'));
+            $pdf = Pdf::loadView('mapas.fatura-exportar-pdf', compact('pacote', 'totalPago'));
             return $pdf->download('fatura-' . $pacote->numero_fatura . '.pdf');
         }
         

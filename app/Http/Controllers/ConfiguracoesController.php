@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
 use App\Models\TipoPacote;
 use App\Models\TipoConta;
 use App\Models\MotivoGlosa;
 use App\Models\Pacote;
 use App\Models\MovimentacaoPacote;
 use App\Models\User;
+use App\Models\Configuracao;
 use App\Models\PacoteAnuladoAudit; //  ADICIONAR APENAS ESTA LINHA
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -40,7 +41,15 @@ class ConfiguracoesController extends Controller
         $tiposPacote = TipoPacote::all();
         $tiposConta = TipoConta::all();
         $motivosGlosa = MotivoGlosa::all();
-        return view('configuracoes.sistema', compact('tiposPacote', 'tiposConta', 'motivosGlosa'));
+
+        $pesosDesempenho = [
+            'volume' => Configuracao::obterValorNumerico('desempenho_peso_volume', 25),
+            'tempo' => Configuracao::obterValorNumerico('desempenho_peso_tempo', 25),
+            'qualidade' => Configuracao::obterValorNumerico('desempenho_peso_qualidade', 25),
+            'retrabalho' => Configuracao::obterValorNumerico('desempenho_peso_retrabalho', 25),
+        ];
+
+        return view('configuracoes.sistema', compact('tiposPacote', 'tiposConta', 'motivosGlosa', 'pesosDesempenho'));
     }
 
     public function ocspsa()
@@ -175,11 +184,28 @@ class ConfiguracoesController extends Controller
         $request->validate([
             'novo_logo' => 'nullable|image|mimes:jpeg,png,svg|max:2048', // Máximo 2MB
             'novo_favicon' => 'nullable|file|mimes:ico,png,jpeg,svg|max:1024', // Máximo 1MB
+            'desempenho_peso_volume' => 'nullable|numeric|min:0|max:100',
+            'desempenho_peso_tempo' => 'nullable|numeric|min:0|max:100',
+            'desempenho_peso_qualidade' => 'nullable|numeric|min:0|max:100',
+            'desempenho_peso_retrabalho' => 'nullable|numeric|min:0|max:100',
         ]);
+
+        $pesoVolume = (float) $request->input('desempenho_peso_volume', 25);
+        $pesoTempo = (float) $request->input('desempenho_peso_tempo', 25);
+        $pesoQualidade = (float) $request->input('desempenho_peso_qualidade', 25);
+        $pesoRetrabalho = (float) $request->input('desempenho_peso_retrabalho', 25);
+
+        $somaPesos = $pesoVolume + $pesoTempo + $pesoQualidade + $pesoRetrabalho;
+        if ($somaPesos <= 0) {
+            return redirect()->route('configuracoes.sistema')
+                ->with('error', 'A soma dos pesos de desempenho deve ser maior que zero.')
+                ->withInput();
+        }
         
         // Processar o logo caso tenha sido enviado
         if ($request->hasFile('novo_logo')) {
             $logo = $request->file('novo_logo');
+            $manager = ImageManager::gd();
             $logoDir = storage_path('app/public');
             $logoPath = $logoDir . '/logo.png';
             $logoBackupPath = $logoDir . '/logo_backup.png';
@@ -192,14 +218,15 @@ class ConfiguracoesController extends Controller
                 copy($logoPath, $logoBackupPath);
             }
 
-            $img = Image::make($logo->getRealPath());
-            $img->fit(130, 130);
+            $img = $manager->read($logo->getRealPath());
+            $img->cover(130, 130);
             $img->save($logoPath);
         }
         
         // Processar o favicon caso tenha sido enviado
         if ($request->hasFile('novo_favicon')) {
             $favicon = $request->file('novo_favicon');
+            $manager = ImageManager::gd();
             $faviconPath = public_path('favicon.ico');
             
             // Criar uma cópia de backup do favicon atual
@@ -208,8 +235,8 @@ class ConfiguracoesController extends Controller
             }
             
             // Redimensionar e salvar o novo favicon
-            $img = Image::make($favicon->getRealPath());
-            $img->fit(32, 32); // Ajustar para 32x32px
+            $img = $manager->read($favicon->getRealPath());
+            $img->cover(32, 32); // Ajustar para 32x32px
             
             // Se o arquivo original não é um .ico, precisamos convertê-lo
             if ($favicon->getClientOriginalExtension() !== 'ico') {
@@ -221,7 +248,10 @@ class ConfiguracoesController extends Controller
         }
         
         // Salvar outras configurações...
-        // ...
+        Configuracao::definirValor('desempenho_peso_volume', $pesoVolume);
+        Configuracao::definirValor('desempenho_peso_tempo', $pesoTempo);
+        Configuracao::definirValor('desempenho_peso_qualidade', $pesoQualidade);
+        Configuracao::definirValor('desempenho_peso_retrabalho', $pesoRetrabalho);
         
         return redirect()->route('configuracoes.sistema')->with('success', 'Configurações salvas com sucesso!');
     }

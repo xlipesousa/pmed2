@@ -404,10 +404,31 @@ function carregarDadosDesempenho(filtros) {
             renderizarDesempenhoRanking(response.ranking || { labels: [], values: [] });
             renderizarDesempenhoEixos(response.eixos || { labels: [], volume: [], tempo: [], qualidade: [], retrabalho: [] });
             renderizarDesempenhoRetrabalho(response.retrabalho || { labels: [], values: [] });
+            renderizarDesempenhoHistorico(response.historico_mensal || { labels: [], valores: [] });
         },
         error: function() {
             console.error('Erro ao carregar dados de desempenho operacional');
         }
     });
 }
+
+$(document).on('click', '#btn-exportar-desempenho-csv', function(e) {
+    e.preventDefault();
+    var filtros = $('#form-filtros').serialize();
+    var url = '{{ route("graficos.desempenho.exportar", ["tipo" => "csv"]) }}';
+    if (filtros) {
+        url += '?' + filtros;
+    }
+    window.open(url, '_blank');
+});
+
+$(document).on('click', '#btn-exportar-desempenho-pdf', function(e) {
+    e.preventDefault();
+    var filtros = $('#form-filtros').serialize();
+    var url = '{{ route("graficos.desempenho.exportar", ["tipo" => "pdf"]) }}';
+    if (filtros) {
+        url += '?' + filtros;
+    }
+    window.open(url, '_blank');
+});
 </script>
