@@ -218,3 +218,6 @@ node_modules
 
 # Plano de avaliacao de desempenho (nao versionado)
 /plano-avaliacao.md
+
+# Prompt local de validacao pre-release (nao versionado)
+/validate.md

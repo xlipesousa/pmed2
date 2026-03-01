@@ -926,7 +926,7 @@ class GraficoController extends Controller
                     'u.id as usuario_id',
                     'u.name as usuario_nome',
                     DB::raw('COUNT(mp.id) as total_movimentacoes'),
-                    DB::raw("SUM(CASE WHEN LOWER(CONCAT(COALESCE(mp.acao, ''), ' ', COALESCE(mp.mensagem, ''), ' ', COALESCE(mp.observacao, ''))) REGEXP 'retrabalho|reprocess|corre(c|ç)(a|ã)o|ajuste|devolu(c|ç)(a|ã)o|retorno' THEN 1 ELSE 0 END) as total_retrabalho"),
+                    DB::raw("SUM(CASE WHEN LOWER(CONCAT(COALESCE(mp.acao, ''), ' ', COALESCE(mp.mensagem, ''), ' ', COALESCE(mp.observacao, ''))) REGEXP '(retrabalho|reprocess(amento|ar)?|corre(c|ç)(a|ã)o( de)?|devolu(c|ç)(a|ã)o para corre(c|ç)(a|ã)o|rean[aá]lise|ajuste de inconsist[êe]ncia|retornad[oa] para corre(c|ç)(a|ã)o)' THEN 1 ELSE 0 END) as total_retrabalho"),
                     DB::raw('AVG(CASE WHEN mp2.created_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, mp.created_at, mp2.created_at) END) as tempo_medio_horas')
                 )
                 ->groupBy('u.id', 'u.name')

@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'current' => env('APP_VERSION', '2.1.0'),
+    'current' => env('APP_VERSION', '2.1.2'),
 ];
