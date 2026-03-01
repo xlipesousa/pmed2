@@ -977,6 +977,145 @@ function renderizarMetaRealizado(data) {
     });
 }
 
+function renderizarDesempenhoRanking(data) {
+    const ctx = document.getElementById('desempenhoRankingChart');
+    if (!ctx) {
+        console.error('Elemento desempenhoRankingChart não encontrado!');
+        return;
+    }
+
+    const context = ctx.getContext('2d');
+
+    if (charts.desempenhoRankingChart) {
+        charts.desempenhoRankingChart.destroy();
+    }
+
+    charts.desempenhoRankingChart = new Chart(context, {
+        type: 'horizontalBar',
+        data: {
+            labels: data.labels || [],
+            datasets: [{
+                label: 'Score Operacional',
+                data: data.values || [],
+                backgroundColor: '#3498db',
+                borderColor: '#2c80b4',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                xAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }]
+            }
+        }
+    });
+}
+
+function renderizarDesempenhoEixos(data) {
+    const ctx = document.getElementById('desempenhoEixosChart');
+    if (!ctx) {
+        console.error('Elemento desempenhoEixosChart não encontrado!');
+        return;
+    }
+
+    const context = ctx.getContext('2d');
+
+    if (charts.desempenhoEixosChart) {
+        charts.desempenhoEixosChart.destroy();
+    }
+
+    charts.desempenhoEixosChart = new Chart(context, {
+        type: 'bar',
+        data: {
+            labels: data.labels || [],
+            datasets: [
+                {
+                    label: 'Volume',
+                    data: data.volume || [],
+                    backgroundColor: '#3498db'
+                },
+                {
+                    label: 'Tempo',
+                    data: data.tempo || [],
+                    backgroundColor: '#2ecc71'
+                },
+                {
+                    label: 'Qualidade',
+                    data: data.qualidade || [],
+                    backgroundColor: '#f39c12'
+                },
+                {
+                    label: 'Retrabalho',
+                    data: data.retrabalho || [],
+                    backgroundColor: '#9b59b6'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }]
+            }
+        }
+    });
+}
+
+function renderizarDesempenhoRetrabalho(data) {
+    const ctx = document.getElementById('desempenhoRetrabalhoChart');
+    if (!ctx) {
+        console.error('Elemento desempenhoRetrabalhoChart não encontrado!');
+        return;
+    }
+
+    const context = ctx.getContext('2d');
+
+    if (charts.desempenhoRetrabalhoChart) {
+        charts.desempenhoRetrabalhoChart.destroy();
+    }
+
+    charts.desempenhoRetrabalhoChart = new Chart(context, {
+        type: 'line',
+        data: {
+            labels: data.labels || [],
+            datasets: [{
+                label: 'Taxa de Retrabalho (%)',
+                data: data.values || [],
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        max: 100,
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }]
+            }
+        }
+    });
+}
+
 // Adicionar as funções de renderização de gráficos de fluxo
 function renderizarGraficoTempoEtapa(data) {
     const canvas = document.getElementById('tempoEtapaChart');

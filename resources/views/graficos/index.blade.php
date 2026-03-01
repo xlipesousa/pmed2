@@ -77,6 +77,11 @@
                                         <i class="fas fa-tachometer-alt mr-1"></i> Performance
                                     </a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="tab-desempenho" data-toggle="pill" href="#desempenho" role="tab" aria-controls="desempenho" aria-selected="false">
+                                        <i class="fas fa-users mr-1"></i> Desempenho
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                         
@@ -105,6 +110,10 @@
                                 <!-- Performance -->
                                 <div class="tab-pane fade" id="performance" role="tabpanel">
                                     @include('graficos.partials.performance')
+                                </div>
+
+                                <div class="tab-pane fade" id="desempenho" role="tabpanel">
+                                    @include('graficos.partials.desempenho')
                                 </div>
                             </div>
                         </div>

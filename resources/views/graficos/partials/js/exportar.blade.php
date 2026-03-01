@@ -383,4 +383,31 @@ function carregarDadosPerformance(filtros) {
         }
     });
 }
+
+// Funções para carregar dados de desempenho operacional
+function carregarDadosDesempenho(filtros) {
+    $.ajax({
+        url: '{{ route("graficos.desempenho") }}',
+        method: 'GET',
+        data: filtros,
+        success: function(response) {
+            var melhorColaborador = '-';
+            if (response.kpis && response.kpis.melhor_colaborador && response.kpis.melhor_colaborador.nome) {
+                melhorColaborador = response.kpis.melhor_colaborador.nome;
+            }
+
+            $('#kpi-desempenho-media-score').text((response.kpis.media_score || 0).toLocaleString('pt-BR', {maximumFractionDigits: 1}));
+            $('#kpi-desempenho-melhor-colaborador').text(melhorColaborador);
+            $('#kpi-desempenho-total-movimentacoes').text((response.kpis.total_movimentacoes || 0).toLocaleString('pt-BR'));
+            $('#kpi-desempenho-retrabalho-medio').text((response.kpis.retrabalho_medio || 0).toLocaleString('pt-BR', {maximumFractionDigits: 1}) + '%');
+
+            renderizarDesempenhoRanking(response.ranking || { labels: [], values: [] });
+            renderizarDesempenhoEixos(response.eixos || { labels: [], volume: [], tempo: [], qualidade: [], retrabalho: [] });
+            renderizarDesempenhoRetrabalho(response.retrabalho || { labels: [], values: [] });
+        },
+        error: function() {
+            console.error('Erro ao carregar dados de desempenho operacional');
+        }
+    });
+}
 </script>

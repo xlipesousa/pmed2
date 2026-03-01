@@ -105,6 +105,9 @@ $(document).ready(function() {
             case 'financeiro':
                 elementosNecessarios = ['composicaoValorTotalChart', 'evolucaoValoresMensaisChart', 'topOcsPsaValorChart', 'tipoContaChart'];
                 break;
+            case 'desempenho':
+                elementosNecessarios = ['desempenhoRankingChart', 'desempenhoEixosChart', 'desempenhoRetrabalhoChart'];
+                break;
             // Adicione outras abas conforme necessário
         }
         
@@ -242,6 +245,9 @@ function atualizarAba(nomeAba) {
             break;
         case 'performance':
             carregarDadosPerformance(filtros);
+            break;
+        case 'desempenho':
+            carregarDadosDesempenho(filtros);
             break;
         default:
             console.warn(`Aba desconhecida: ${nomeAba}`);
