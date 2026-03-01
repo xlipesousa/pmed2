@@ -81,8 +81,21 @@ class PacotesController extends Controller
         ]);
 
         // Verificar duplicidade por numero da fatura + OCS/PSA
+        // REGRA: bloquear apenas se já existir pacote ATIVO (não anulado)
         $pacoteExistente = Pacote::where('numero_fatura', $request->numero_fatura)
             ->where('ocs_psa_id', $request->ocs_psa_id)
+            ->where(function ($query) {
+                $query->whereNull('anulado')
+                    ->orWhere('anulado', false);
+            })
+            ->where(function ($query) {
+                $query->whereNull('localizacao_atual')
+                    ->orWhere('localizacao_atual', '!=', 'anulado');
+            })
+            ->where(function ($query) {
+                $query->whereNull('estado_geral')
+                    ->orWhere('estado_geral', '!=', 'Anulado');
+            })
             ->first();
 
         if ($pacoteExistente) {
