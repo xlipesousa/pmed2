@@ -28,6 +28,25 @@ jobs:
             exit 1;
           }
 
+      - name: Validar tag x versão declarada
+        run: |
+          set -euo pipefail
+          APP_VERSION="$(php -r '$c=json_decode(file_get_contents("composer.json"), true); echo $c["version"] ?? "";')"
+          if [ -z "$APP_VERSION" ]; then
+            echo "composer.json sem campo version."
+            exit 1
+          fi
+
+          TAG_VERSION="${{ inputs.tag }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+
+          if [ "$APP_VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag (${TAG_VERSION}) difere da versão declarada (${APP_VERSION})."
+            exit 1
+          fi
+
+          echo "Tag e versão declarada estão alinhadas: ${APP_VERSION}"
+
       - name: Validar pré-requisitos do runner
         run: |
           set -euo pipefail

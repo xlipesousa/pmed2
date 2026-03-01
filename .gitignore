@@ -209,3 +209,9 @@ node_modules
 
 # Plano de upgrade (nao versionado)
 /plano-upgrade.md
+
+# Plano de migracao do legado para novo prod (nao versionado)
+/plano-migrate-prod-legado.md
+
+# Plano DevOps local (nao versionado)
+/plano-devops.md

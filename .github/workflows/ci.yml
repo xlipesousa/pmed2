@@ -22,6 +22,22 @@ jobs:
       - name: Composer validate
         run: composer validate --no-check-publish
 
+      - name: Validar versão semântica do app
+        run: |
+          set -euo pipefail
+          APP_VERSION="$(php -r '$c=json_decode(file_get_contents("composer.json"), true); echo $c["version"] ?? "";')"
+          if [ -z "$APP_VERSION" ]; then
+            echo "composer.json sem campo version."
+            exit 1
+          fi
+
+          if ! echo "$APP_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Versão inválida em composer.json: $APP_VERSION (esperado MAJOR.MINOR.PATCH)"
+            exit 1
+          fi
+
+          echo "Versão semântica válida: $APP_VERSION"
+
       - name: Install deps (com dev)
         run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
 
