@@ -225,6 +225,24 @@ php artisan optimize:clear
 
 ## 🛡️ Segurança e Rollback
 
+### Política de artefatos legados de upgrade
+
+Com a descontinuação do upgrade via painel web, os artefatos abaixo passam a ser tratados como legado operacional:
+
+- `storage/logs/upgrade.log`
+- `storage/logs/upgrade-status.json`
+
+Diretriz:
+- Não são mais fonte de verdade para deploy;
+- Podem ser arquivados para histórico local quando existirem;
+- Podem ser removidos em rotina de limpeza, desde que não haja investigação em curso.
+
+Exemplo de limpeza opcional:
+
+```bash
+rm -f storage/logs/upgrade.log storage/logs/upgrade-status.json
+```
+
 ### Se algo der errado:
 
 ```bash
