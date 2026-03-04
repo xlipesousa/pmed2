@@ -7,6 +7,12 @@ Você está em **ambiente de desenvolvimento** com:
 - ✅ Documentação nova no GitHub (README.md, relatorio.md, install.sh, etc.)
 - ⚠️ Arquivos locais precisam ser mesclados com documentação do GitHub
 
+## 🧭 Governança de Atualização
+
+- A atualização da aplicação PMED2 é **exclusivamente** pelo fluxo oficial de CI/CD.
+- O mecanismo de upgrade via painel web (`/configuracoes/upgrade`) foi descontinuado.
+- Scripts locais (`install.sh`, `update.sh`) permanecem para cenários operacionais de infraestrutura, fora da interface administrativa.
+
 ## 🚀 Opções de Deploy
 
 ### Opção 1: Script Automático (RECOMENDADO)
