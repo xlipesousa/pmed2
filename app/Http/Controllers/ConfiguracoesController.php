@@ -57,50 +57,6 @@ class ConfiguracoesController extends Controller
         return view('configuracoes.ocspsa');
     }
 
-    private function getCommitInfo(): array
-    {
-        $commitHash = 'N/A';
-        $commitDate = 'N/A';
-
-        if (is_dir(base_path('.git'))) {
-            $repoPath = escapeshellarg(base_path());
-            $commitHash = trim((string) shell_exec('git -C ' . $repoPath . ' rev-parse --short HEAD 2>/dev/null'));
-            $commitDate = trim((string) shell_exec('git -C ' . $repoPath . ' log -1 --format=%cd --date=iso 2>/dev/null'));
-
-            if ($commitHash === '') {
-                $commitHash = 'N/A';
-            }
-            if ($commitDate === '') {
-                $commitDate = 'N/A';
-            }
-        }
-
-        return [$commitHash, $commitDate];
-    }
-
-    private function getUpgradeStatus(): array
-    {
-        $statusPath = storage_path('logs/upgrade-status.json');
-        if (!file_exists($statusPath)) {
-            return ['status' => 'desconhecido'];
-        }
-
-        $raw = file_get_contents($statusPath);
-        $data = json_decode($raw, true);
-        if (!is_array($data)) {
-            return ['status' => 'desconhecido'];
-        }
-
-        return $data;
-    }
-
-    private function setUpgradeStatus(array $data): void
-    {
-        $statusPath = storage_path('logs/upgrade-status.json');
-        $payload = array_merge(['status' => 'desconhecido', 'updated_at' => now()->toDateTimeString()], $data);
-        file_put_contents($statusPath, json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-    }
-
     public function salvarSistema(Request $request)
     {
         // Aqui seria a lógica para salvar as configurações
