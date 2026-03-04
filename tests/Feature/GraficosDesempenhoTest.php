@@ -8,7 +8,6 @@ use App\Models\Pacote;
 use App\Models\TipoConta;
 use App\Models\TipoPacote;
 use App\Models\User;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -32,7 +31,7 @@ class GraficosDesempenhoTest extends TestCase
         }
 
         if (!self::$baseMigrada) {
-            Artisan::call('migrate:fresh');
+            $this->artisan('migrate:fresh')->assertExitCode(0);
             self::$baseMigrada = true;
         }
     }
