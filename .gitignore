@@ -198,7 +198,7 @@ node_modules
 
 # Planos dev
 planos/
-
+!planos/plano-retomada.md
 # Plano de migracao (nao versionado)
 /plano.md
 
