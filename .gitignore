@@ -21,6 +21,7 @@
 .env.production
 .env.local
 .env.*.local
+.secrets/
 
 # Chaves e certificados
 /storage/*.key
@@ -194,6 +195,9 @@ deploy-result.txt
 # (remover comentário se não quiser versionar)
 # /docs/drafts/
 node_modules
+
+# Planos dev
+planos/
 
 # Plano de migracao (nao versionado)
 /plano.md

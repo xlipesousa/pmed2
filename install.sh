@@ -65,6 +65,26 @@ escape_mysql_string() {
     printf '%s' "$value"
 }
 
+dotenv_quote() {
+    local value="$1"
+    value="$(printf '%s' "$value" | sed "s/'/'\"'\"'/g")"
+    printf "'%s'" "$value"
+}
+
+set_env_value() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+    local quoted
+    quoted="$(dotenv_quote "$value")"
+
+    if grep -q "^${key}=" "$file"; then
+        sed -i "s#^${key}=.*#${key}=${quoted}#" "$file"
+    else
+        printf '%s=%s\n' "$key" "$quoted" >> "$file"
+    fi
+}
+
 # Defaults
 APP_DIR="/var/www/pmed2"
 DOMAIN="localhost"
@@ -376,13 +396,9 @@ else
 fi
 
 print_message "Configurando .env com dados do banco..."
-DB_NAME_SED=$(escape_sed_replacement "$DB_NAME")
-DB_USER_SED=$(escape_sed_replacement "$DB_USER")
-DB_PASS_SED=$(escape_sed_replacement "$DB_PASS")
-
-sed -i "s/DB_DATABASE=.*/DB_DATABASE=$DB_NAME_SED/" "$WORK_DIR/.env"
-sed -i "s/DB_USERNAME=.*/DB_USERNAME=$DB_USER_SED/" "$WORK_DIR/.env"
-sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=$DB_PASS_SED/" "$WORK_DIR/.env"
+set_env_value "$WORK_DIR/.env" "DB_DATABASE" "$DB_NAME"
+set_env_value "$WORK_DIR/.env" "DB_USERNAME" "$DB_USER"
+set_env_value "$WORK_DIR/.env" "DB_PASSWORD" "$DB_PASS"
 
 print_message "Instalando dependencias PHP (Composer)..."
 ( cd "$WORK_DIR" && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader )
@@ -601,10 +617,9 @@ fi
 if [[ -n "$APP_URL_OVERRIDE" ]]; then
     APP_URL="$APP_URL_OVERRIDE"
 fi
-APP_URL_SED=$(escape_sed_replacement "$APP_URL")
-sed -i "s/APP_ENV=.*/APP_ENV=production/" "$WORK_DIR/.env"
-sed -i "s/APP_DEBUG=.*/APP_DEBUG=false/" "$WORK_DIR/.env"
-sed -i "s#APP_URL=.*#APP_URL=$APP_URL_SED#" "$WORK_DIR/.env"
+set_env_value "$WORK_DIR/.env" "APP_ENV" "production"
+set_env_value "$WORK_DIR/.env" "APP_DEBUG" "false"
+set_env_value "$WORK_DIR/.env" "APP_URL" "$APP_URL"
 
 systemctl daemon-reload
 systemctl enable pmed2.service

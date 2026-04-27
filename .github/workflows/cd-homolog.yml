@@ -35,22 +35,8 @@ jobs:
       - name: Validar pré-requisitos do runner
         run: |
           set -euo pipefail
-          command -v git
           command -v ssh
           command -v scp
-          command -v sha256sum
-
-      - name: Build zip da tag
-        run: |
-          set -euo pipefail
-          mkdir -p build
-          OUT="build/pmed2-${{ github.ref_name }}.zip"
-          if command -v zip >/dev/null 2>&1; then
-            zip -rq "$OUT" . \
-              -x ".git/*" "node_modules/*" "storage/logs/*" "storage/framework/*"
-          else
-            git archive --format=zip --output "$OUT" HEAD
-          fi
 
       - name: Preparar chave SSH de homolog
         run: |
@@ -69,65 +55,124 @@ jobs:
           set -euo pipefail
           ssh -i ~/.ssh/pmed2_homolog -o BatchMode=yes -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" "hostname && whoami"
 
-      - name: Enviar zip para homolog
+      - name: Validar segredo DB (homolog)
         run: |
           set -euo pipefail
-          scp -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes build/*.zip "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}:/tmp/"
+          if [ -z "${{ secrets.PMED2_HOM_DB_PASSWORD }}" ]; then
+            echo "Secret PMED2_HOM_DB_PASSWORD não definido."
+            exit 1
+          fi
 
-      - name: Enviar scripts para homolog
-        run: |
-          set -euo pipefail
-          ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" "mkdir -p /tmp/pmed2-scripts/scripts"
-          scp -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes scripts/deploy.sh scripts/rollback.sh scripts/backup.sh "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}:/tmp/pmed2-scripts/scripts/"
-
-      - name: Calcular hashes locais dos scripts
-        id: local_hashes
-        run: |
-          set -euo pipefail
-          echo "deploy_sha=$(sha256sum scripts/deploy.sh | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          echo "rollback_sha=$(sha256sum scripts/rollback.sh | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          echo "backup_sha=$(sha256sum scripts/backup.sh | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-
-      - name: Instalar scripts na pasta shared (homolog)
+      - name: Enviar arquivos de compose para homolog
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" '
             set -euo pipefail
-            mkdir -p /var/www/pmed2/shared/scripts
-            cp -f /tmp/pmed2-scripts/scripts/deploy.sh /var/www/pmed2/shared/scripts/deploy.sh
-            cp -f /tmp/pmed2-scripts/scripts/rollback.sh /var/www/pmed2/shared/scripts/rollback.sh
-            cp -f /tmp/pmed2-scripts/scripts/backup.sh /var/www/pmed2/shared/scripts/backup.sh
-            chmod 755 /var/www/pmed2/shared/scripts/deploy.sh /var/www/pmed2/shared/scripts/rollback.sh /var/www/pmed2/shared/scripts/backup.sh
+            mkdir -p /var/www/pmed2/deploy /var/www/pmed2/docker/nginx /var/www/pmed2/shared/compose /var/www/pmed2/shared/secrets
           '
+          scp -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes deploy/compose.homolog.yml "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}:/var/www/pmed2/deploy/compose.homolog.yml"
+          scp -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes docker/nginx/default.conf "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}:/var/www/pmed2/docker/nginx/default.conf"
 
-      - name: Validar scripts remotos (auditoria)
+      - name: Instalar segredo DB por arquivo (homolog)
         run: |
           set -euo pipefail
-          expected_deploy='${{ steps.local_hashes.outputs.deploy_sha }}'
-          expected_rollback='${{ steps.local_hashes.outputs.rollback_sha }}'
-          expected_backup='${{ steps.local_hashes.outputs.backup_sha }}'
+          printf '%s' "${{ secrets.PMED2_HOM_DB_PASSWORD }}" | \
+            ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" '
+              set -euo pipefail
+              umask 077
+              cat > /var/www/pmed2/shared/secrets/db_password
+              chmod 600 /var/www/pmed2/shared/secrets/db_password
+            '
 
-          remote_output="$(ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" '
-            set -euo pipefail
-            ls -l /var/www/pmed2/shared/scripts
-            echo "DEPLOY=$(sha256sum /var/www/pmed2/shared/scripts/deploy.sh | cut -d" " -f1)"
-            echo "ROLLBACK=$(sha256sum /var/www/pmed2/shared/scripts/rollback.sh | cut -d" " -f1)"
-            echo "BACKUP=$(sha256sum /var/www/pmed2/shared/scripts/backup.sh | cut -d" " -f1)"
-          ')"
-
-          remote_deploy="$(echo "$remote_output" | awk -F= '/^DEPLOY=/{print $2}')"
-          remote_rollback="$(echo "$remote_output" | awk -F= '/^ROLLBACK=/{print $2}')"
-          remote_backup="$(echo "$remote_output" | awk -F= '/^BACKUP=/{print $2}')"
-
-          [[ "$remote_deploy" == "$expected_deploy" ]] || { echo "Hash mismatch: deploy.sh"; exit 1; }
-          [[ "$remote_rollback" == "$expected_rollback" ]] || { echo "Hash mismatch: rollback.sh"; exit 1; }
-          [[ "$remote_backup" == "$expected_backup" ]] || { echo "Hash mismatch: backup.sh"; exit 1; }
-          echo "Integridade ponta a ponta validada (runner x homolog)."
-
-      - name: Executar deploy remoto (homolog)
+      - name: Deploy docker compose (homolog) com rollback automático
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" "/var/www/pmed2/shared/scripts/deploy.sh '${{ github.ref_name }}'"
+          ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" "TAG='${{ github.ref_name }}' GHCR_USER='${{ secrets.PMED2_HOM_GHCR_USER }}' GHCR_TOKEN='${{ secrets.PMED2_HOM_GHCR_TOKEN }}' bash -s" <<'EOSSH'
+          set -euo pipefail
+
+          APP_BASE="/var/www/pmed2"
+          COMPOSE_FILE="$APP_BASE/deploy/compose.homolog.yml"
+          SHARED_ENV="$APP_BASE/shared/.env"
+          COMPOSE_ENV_DIR="$APP_BASE/shared/compose"
+          COMPOSE_ENV_FILE="$COMPOSE_ENV_DIR/.env.homolog"
+          CURRENT_TAG_FILE="$COMPOSE_ENV_DIR/current_tag"
+          PREVIOUS_TAG_FILE="$COMPOSE_ENV_DIR/previous_tag"
+          NEW_TAG="$TAG"
+          IMAGE_NAME="ghcr.io/xlipesousa/pmed2"
+
+          mkdir -p "$COMPOSE_ENV_DIR"
+
+          read_env() {
+            local key="$1"
+            local default_value="${2:-}"
+            local value
+            value="$(grep -E "^${key}=" "$SHARED_ENV" | tail -n1 | cut -d'=' -f2- || true)"
+            value="${value%\"}"
+            value="${value#\"}"
+            value="${value%\'}"
+            value="${value#\'}"
+            if [ -z "$value" ]; then
+              value="$default_value"
+            fi
+            printf '%s' "$value"
+          }
+
+          CURRENT_TAG=""
+          if [ -s "$CURRENT_TAG_FILE" ]; then
+            CURRENT_TAG="$(cat "$CURRENT_TAG_FILE")"
+          fi
+
+          if [ -n "$CURRENT_TAG" ] && [ "$CURRENT_TAG" != "$NEW_TAG" ]; then
+            echo "$CURRENT_TAG" > "$PREVIOUS_TAG_FILE"
+          fi
+
+          rollback() {
+            local prev
+            if [ -s "$PREVIOUS_TAG_FILE" ]; then
+              prev="$(cat "$PREVIOUS_TAG_FILE")"
+              echo "Falha detectada. Aplicando rollback para ${prev}"
+              sed -i "s#^IMAGE_TAG=.*#IMAGE_TAG=${prev}#" "$COMPOSE_ENV_FILE"
+              docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" pull
+              docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up -d --remove-orphans
+              echo "$prev" > "$CURRENT_TAG_FILE"
+            else
+              echo "Sem tag anterior registrada para rollback automático."
+            fi
+          }
+
+          trap 'rollback' ERR
+
+          APP_URL="$(read_env APP_URL http://localhost)"
+          DB_HOST="$(read_env DB_HOST 127.0.0.1)"
+          DB_PORT="$(read_env DB_PORT 3306)"
+          DB_DATABASE="$(read_env DB_DATABASE pmed2)"
+          DB_USERNAME="$(read_env DB_USERNAME pmed2)"
+
+          {
+            printf 'IMAGE_NAME=%s\n' "$IMAGE_NAME"
+            printf 'IMAGE_TAG=%s\n' "$NEW_TAG"
+            printf 'APP_URL=%s\n' "$APP_URL"
+            printf 'APP_DEBUG=false\n'
+            printf 'APP_HTTP_PORT=80\n'
+            printf 'DB_HOST=%s\n' "$DB_HOST"
+            printf 'DB_PORT=%s\n' "$DB_PORT"
+            printf 'DB_DATABASE=%s\n' "$DB_DATABASE"
+            printf 'DB_USERNAME=%s\n' "$DB_USERNAME"
+            printf 'DB_PASSWORD_SECRET_FILE=/var/www/pmed2/shared/secrets/db_password\n'
+          } > "$COMPOSE_ENV_FILE"
+
+          if [ -n "${GHCR_USER:-}" ] && [ -n "${GHCR_TOKEN:-}" ]; then
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          fi
+
+          docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" pull
+          docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up -d --remove-orphans
+
+          curl -fsS http://127.0.0.1/health >/dev/null
+
+          echo "$NEW_TAG" > "$CURRENT_TAG_FILE"
+          echo "Deploy homolog concluído com sucesso: $NEW_TAG"
+          EOSSH
 
       - name: Healthcheck pós-deploy (homolog)
         run: |
