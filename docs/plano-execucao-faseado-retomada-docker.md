@@ -518,6 +518,30 @@ Acoes de curto prazo (proximas 3 semanas):
 2. Migrar definitivamente rotina de backup/cron para fluxo Docker agendado.
 3. Medir ocorrencia de fallback manual (deploy/rollback) para decidir remocao do lote 2.
 
+---
+
+## Atualizacao 2026-05-16 - Retomada Pos Chat Corrompido
+
+Escopo executado nesta iteracao:
+- [x] Revisar relatorio em `docs/plano-execucao-faseado-retomada-docker.md`.
+- [x] Sincronizar branch remota para PR (`git push -u origin refactor/remove-upgrade-web-phase1`).
+- [x] Executar code review tecnico dos workflows e artefatos de deploy.
+- [ ] Criar PR automaticamente via API/CLI.
+
+Evidencias operacionais coletadas:
+- Branch atual: `refactor/remove-upgrade-web-phase1`.
+- Comparacao com `main`: `0 behind / 15 ahead`.
+- Push remoto: `Everything up-to-date`.
+
+Bloqueio para criacao automatica de PR:
+- `gh` nao instalado no host de trabalho.
+- Sem `GITHUB_TOKEN`/`GH_TOKEN` no ambiente.
+- Tentativa via URL de compare em sessao anonima retornou 404 (repositorio privado sem autenticacao no navegador da automacao).
+
+Parecer desta iteracao:
+- Merge continua tecnicamente viavel.
+- Ha ajustes recomendados de seguranca em CI/CD antes da promocao para producao (ver findings do code review).
+
 Acoes de longo prazo (apos estabilizacao):
 1. Remover scripts legados planejados no lote 1 e lote 2 conforme criterio de uso.
 2. Fechar ciclo de governanca com auditoria final sem legado host.
