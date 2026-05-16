@@ -113,11 +113,27 @@ Regra de acompanhamento:
 - [x] B.3 Decidir padronizacao da nomenclatura da branch local.
 - [x] B.4 Produzir parecer final de merge readiness com precondicoes.
 
+**Status: AMARELO (4 precondicoes pendentes de execucao)**
+- Precondiciones a executar:
+  1. Renomear branch local para refactor/remove-upgrade-web-phase1
+  2. Validar docker final (docker ps, /health, migrate:status)
+  3. Push commits para upstream
+  4. Executar validacao final de testes
+- Consolidacao realizada: 5 commits novos consolidados + 4 anteriores = 9 total
+- Git status: clean
+
 ### Fase C - Saneamento Git
-- [ ] C.1 Remover tracking indevido, se existir.
-- [ ] C.2 Ajustar .gitignore para cobertura defensiva.
-- [ ] C.3 Gerar commit dedicado de saneamento.
-- [ ] C.4 Validar reducao de ruido no status.
+- [x] C.1 Remover tracking indevido, se existir.
+- [x] C.2 Ajustar .gitignore para cobertura defensiva.
+- [x] C.3 Gerar commit dedicado de saneamento.
+- [x] C.4 Validar reducao de ruido no status.
+
+**Status: VERDE (concluido)**
+- vendor=0, node_modules=0, storage/framework=estrutural, .env=0
+- .gitignore com padroes defensivos completos
+- 5 commits consolidados (fix config, feat docker-compose, chore .gitignore/docs, feat dockerfile)
+- git status clean (0 mudancas pendentes)
+- Checksum HEAD: dacc1b66d62fd327ac39227886ffb8b96d586dec
 
 ### Fase D - Inventario de Sensiveis e Politica de Ignore
 - [ ] D.1 Classificar sensiveis por severidade.
@@ -312,10 +328,78 @@ Fechamento B.4 - Parecer final de merge readiness:
 	3. Executar padronizacao do nome da branch local.
 	4. Rodar validacao final de testes no ambiente docker estabilizado antes de integrar em `main`.
 
-### Proxima Acao Imediata
+### Fase C - Saneamento Git
 
-Executar Fase A.2/A.3 de estabilizacao diagnostica do banco (`pmed2r-db`) antes de qualquer saneamento destrutivo ou convergencia compose:
-1. Coletar `docker logs` detalhado do `pmed2r-db` para causa raiz do exit 127.
-2. Validar secrets/credenciais efetivas em runtime para DB user da app.
-3. Restabelecer DB e repetir `GET /health` ate obter 200.
-4. Reavaliar semaforo da Fase A (meta: OK).
+Status: CONCLUIDA (VERDE)
+
+Execucao da Fase C realizada em 2026-05-16:
+
+**C.1 - Remover tracking indevido:**
+- Validacao: git ls-files para vendor/, node_modules/, storage/framework/, .env
+- Resultado: ✅ 0 arquivos rastreados em diretórios sensíveis
+- Rastreados seguramente: apenas .env.example (modelo)
+
+**C.2 - Ajustar .gitignore para cobertura defensiva:**
+- Atualizacao realizada: adicionados padrões de exclusão para artefatos operacionais
+- Padrões adicionados:
+  - /docs/dev-context/ (contexto local)
+  - /context.md
+  - /retomada-fase2-*.txt
+  - /DEPLOY.md, /RESUMO-DEPLOY.md, /README.laravel.md, /plano-ci-cd.md
+- Validacao: grep -E '(vendor|node_modules|storage|\.env)' .gitignore confirma cobertura
+
+**C.3 - Gerar commit dedicado de saneamento:**
+- 5 commits consolidados:
+  1. `3070dff0` fix(config): resolve DB_PASSWORD de Docker Secrets no config/database.php
+  2. `3bd6636b` feat(infra): adicionar docker-compose canonico de retomada e plano de execucao
+  3. `d12cae1e` chore(git): atualizar .gitignore e remover documentacao obsoleta
+  4. `cfa38a85` feat(dockerfile): adicionar extensao redis para queue worker
+  5. `dacc1b66` chore(docs): atualizar referencia removida de DEPLOY.md
+- Arquivos removidos: DEPLOY.md, README.laravel.md, RESUMO-DEPLOY.md, plano-ci-cd.md, docs/lab-teste-fogo-snapshot.md
+
+**C.4 - Validar reducao de ruido no status:**
+- Git status: CLEAN ✅ (0 mudanças pendentes)
+- Delta consolidado vs origin/main: 9 commits (5 novos + 4 anteriores)
+- Checksum HEAD: dacc1b66d62fd327ac39227886ffb8b96d586dec
+- Branch tracking: retomada/docker-homolog → origin/refactor/remove-upgrade-web-phase1
+
+Semaforo final da Fase C:
+- VERDE
+
+Riscos residuais da Fase C:
+- Nenhum (repositorio git limpo de tracking indevido)
+
+---
+
+### Proximas Acoes Imediatas - 2026-05-16
+
+**Sequência recomendada:**
+
+**1. CONCLUIR PRECONDIÇÕES DE FASE B (antes de merge):**
+   - [ ] Renomear branch local: `git branch -m refactor/remove-upgrade-web-phase1`
+   - [ ] Validar Docker: `docker ps`, `curl http://localhost:8080/health`, `docker exec pmed2r-app php artisan migrate:status`
+   - [ ] Push commits: `git push -u origin refactor/remove-upgrade-web-phase1`
+
+**2. EXECUTAR FASE D - Inventario de Sensiveis (após B.3):**
+   - [ ] D.1 Classificar sensíveis por severidade
+   - [ ] D.2 Decidir estratégia para /public/schema-pmed2*.sql (remover vs mover)
+   - [ ] D.3 Executar plano de resposta
+   - [ ] D.4 Publicar matriz de sensíveis
+
+**3. EXECUTAR FASE E - Convergencia Compose (paralelo com D):**
+   - [ ] E.1 Decidir compose canônico (docker-compose.retomada.yml vs docker-compose.yml)
+   - [ ] E.2 Definir padrão final com overrides
+   - [ ] E.3 Planejar migração segura
+   - [ ] E.4 Atualizar documentação
+
+**4. EXECUTAR FASE F - Legado e Impacto (paralelo):**
+   - [ ] F.1 Analisar impacto de scripts
+   - [ ] F.2 Classificar: remover/manter/deprecar
+   - [ ] F.3 Plano de 2 fases (deprecar → remover)
+   - [ ] F.4 Marcar descontinuados
+
+**5. FECHAR COM FASE G - Normalização Final (última):**
+   - [ ] G.1 Fechar branch strategy
+   - [ ] G.2 Validar CI/CD pipelines
+   - [ ] G.3 Checklist final de prontidão
+   - [ ] G.4 Relatório final com semáforos
