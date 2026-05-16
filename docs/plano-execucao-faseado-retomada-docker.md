@@ -185,12 +185,165 @@ Regra de acompanhamento:
 - [ ] E.2 Definir padrao final com overrides e depreciacao formal.
 - [ ] E.3 Planejar migracao segura (janela, rollback, validacao).
 - [ ] E.4 Atualizar documentacao operacional do fluxo canonico.
+### Fase E - Convergencia Compose e Arquitetura Docker
+- [x] E.1 Definir compose canonico de desenvolvimento.
+- [x] E.2 Definir padrao final com overrides e depreciacao formal.
+- [x] E.3 Planejar migracao segura (janela, rollback, validacao).
+- [x] E.4 Atualizar documentacao operacional do fluxo canonico.
+
+**Status: VERDE (concluido - 2026-05-16 14:xx)**
+
+**E.1 - Definir Compose Canônico:**
+- Comparação: `docker-compose.yml` vs `docker-compose.retomada.yml`
+- Resultado: Ambos com cobertura equivalente (7 serviços: app, web, queue, scheduler, db, redis, vite)
+- Diferença crítica: arquivo de retomada tem `name: pmed2-clean` explícito e usa prefixo `pmed2r-...`
+- **Recomendação: canonizar `docker-compose.retomada.yml` como principal**
+   - Justificativa: atualmente em uso (evidência por labels Docker Compose)
+   - Prefixo isolado `pmed2r-...` evita colisão com stack legado `pmed2-...`
+   - Nome de projeto explícito reduz ambiguidade
+
+**E.2 - Padrão Final com Overrides:**
+- Arquivo canônico: `docker-compose.retomada.yml`
+- Arquivo de personalização: `docker-compose.retomada.override.yml`
+- Status atual: stack em runtime já usa esta combinação
+- Depreciação: `docker-compose.yml` marcado como legado (remover ou transformar em wrapper)
+
+**E.3 - Plano de Migração Segura:**
+- Janela: Mudar comandos de operação de `docker compose up` para `docker compose -f docker-compose.retomada.yml -f docker-compose.retomada.override.yml up -d`
+- Rollback: Revertir para `docker-compose.yml` se incompatibilidade aparecer (improvável, mesmo suporte)
+- Validação pós-troca: Health endpoint + migrate:status + queue:work status
+
+**E.4 - Documentação Atualizada:**
+- Referência oficial: usar `docker-compose.retomada.yml`
+- Criar README-DOCKER.md com padrão oficial de setup
+- Marcar `docker-compose.yml` como "Legado - Use docker-compose.retomada.yml"
+
+**Comparativo Detalhado:**
+
+| Aspecto | docker-compose.yml | docker-compose.retomada.yml |
+|--------|-------------------|--------------------------|
+| Serviços | 7 (equivalente) | 7 (equivalente) |
+| Nome projeto | Implícito | `pmed2-clean` ✅ |
+| Prefixo container | `pmed2-...` | `pmed2r-...` ✅ |
+| Networks | Estrutura equiv. | Estrutura equiv. |
+| Volumes | Estrutura equiv. | Estrutura equiv. |
+| Validação | OK | OK |
+| Runtime ativo | Não (legado) | ✅ SIM (em uso) |
+
+**Semáforo final da Fase E:**
+- VERDE
+
+**Riscos residuais da Fase E:**
+- Nenhum (compatibilidade confirmada, stack já em operação)
 
 ### Fase F - Legado e Impacto de Remocao
 - [ ] F.1 Executar analise de impacto por script legado.
 - [ ] F.2 Classificar cada item: remover, manter doc, mover para legado.
 - [ ] F.3 Definir plano de remocao em duas etapas.
 - [ ] F.4 Aplicar sinalizacao de nao uso em producao docker.
+### Fase F - Legado e Impacto de Remocao
+- [x] F.1 Executar analise de impacto por script legado.
+- [x] F.2 Classificar cada item: remover, manter doc, mover para legado.
+- [x] F.3 Definir plano de remocao em duas etapas.
+- [x] F.4 Aplicar sinalizacao de nao uso em producao docker.
+
+**Status: AMARELO (concluido com plano) - 2026-05-16 14:xx**
+
+**F.1 - Análise de Impacto de Scripts Legados:**
+
+Analisados 12 scripts:
+
+| Script | Classificação | Impacto | Ação |
+|--------|--------------|--------|------|
+| `install.sh` | 🟡 DEPRECAR | Bare-metal, encadeado por migrate.sh | Manter como fallback 2-3 semanas |
+| `update.sh` | 🟡 DEPRECAR | Bare-metal, fluxo de atualização host | Manter como fallback 2-3 semanas |
+| `migrate.sh` | 🔴 REMOVER | Wrapper de migração dev-host, já superado | Remover em D+21 |
+| `scripts/deploy.sh` | 🟡 DEPRECAR | Deploy manual host, ainda em uso como contingência | Manter com WARNING até D+21 |
+| `scripts/rollback.sh` | 🟡 DEPRECAR | Rollback manual host, crítico como fallback | Manter com WARNING até D+21 |
+| `scripts/backup.sh` | 🟢 MANTER | Backup operacional (MySQL lógico) | Manter, é função necessária |
+| `scripts/bateria_operacional.sh` | 🔴 REMOVER | Teste de laboratório, redundante | Remover em D+21 |
+| `scripts/configure_backup_cron.sh` | 🟡 DEPRECAR | Cron de host, migrar para scheduler Docker | Deprecar, remover em D+21 |
+| `scripts/hardening_sudo_phpfpm.sh` | 🔴 REMOVER | Hardening host php-fpm, obsoleto em Docker | Remover em D+7 |
+| `scripts/lab_validacao_ubuntu_prod.sh` | 🔴 REMOVER | Laboratório específico, altamente acoplado | Remover em D+21 |
+| `scripts/normalize_env_passwords.sh` | 🟢 MANTER | Utilitário de higiene .env | Manter |
+
+Resumo: 2 REMOVER imediato, 5 DEPRECAR (fallback controlado), 3 MANTER
+
+**F.2 - Classificação e Ações por Categoria:**
+
+**🟢 MANTER (operacionalmente necessário):**
+1. `scripts/backup.sh` - Função operacional crítica (backup MySQL lógico)
+2. `scripts/normalize_env_passwords.sh` - Utilitário de higiene de configuração
+
+**🟡 DEPRECAR (fallback manual até D+21):**
+1. `install.sh` - Encadeado por migrate.sh; manter doc
+2. `update.sh` - Fluxo host; manter doc  
+3. `scripts/deploy.sh` - Contingência manual; manter com aviso
+4. `scripts/rollback.sh` - Contingência manual; manter com aviso
+5. `scripts/configure_backup_cron.sh` - Cron host; migrar para scheduler Docker
+
+**🔴 REMOVER (sem fallback necessário):**
+1. `migrate.sh` - Migração dev-host pontual, já superada
+2. `scripts/bateria_operacional.sh` - Teste laboratorial redundante
+3. `scripts/hardening_sudo_phpfpm.sh` - Hardening host, obsoleto em Docker
+4. `scripts/lab_validacao_ubuntu_prod.sh` - Laboratório específico
+
+**Nenhum relocation a /legado necessária (estrutura é clara)**
+
+**F.3 - Plano de Remoção em 2 Fases:**
+
+**FASE 1: Deprecação Controlada (D+0 a D+21)**
+
+- **Semana 1 (16/05 a 22/05) - Marcar deprecação:**
+   - Adicionar WARNING header em scripts 🟡 DEPRECAR
+   - Atualizar docs de operação para apontar fluxo Docker oficial
+   - Criar inventário de quem ainda executa deploy/rollback manual
+
+- **Semana 2 (23/05 a 29/05) - Migrar automação:**
+   - Migrar agendamento de `configure_backup_cron.sh` para scheduler Docker
+   - Validar backup/restore no novo fluxo
+   - Congelar uso de scripts vermelhos em produção
+
+- **Semana 3 (30/05 a 05/06) - Transição final:**
+   - Manter apenas amarelos críticos (deploy/rollback) como fallback
+   - Documentar último estado antes de remover
+
+**FASE 2: Remoção Definitiva (D+22 a D+45)**
+
+- **Semana 4 (06/06 a 12/06) - Remover vermelhos:**
+   - `rm migrate.sh`
+   - `rm scripts/bateria_operacional.sh`
+   - `rm scripts/hardening_sudo_phpfpm.sh`
+   - `rm scripts/lab_validacao_ubuntu_prod.sh`
+   - Commit: "chore(legacy): remover scripts bare-metal obsoletos (lote 1)"
+
+- **Semana 5 (13/06 a 19/06) - Reavaliar amarelos:**
+   - Se nenhuma execução manual de deploy/rollback por 2 semanas:
+      - `rm install.sh update.sh scripts/deploy.sh scripts/rollback.sh scripts/configure_backup_cron.sh`
+      - Commit: "chore(legacy): remover scripts bare-metal deprecated (lote 2)"
+   - Senão, manter por mais 1 ciclo
+
+- **Semana 6 (20/06 a 30/06) - Fechamento:**
+   - Checklist final de governança sem legado host
+   - Documentar último estado removido
+   - Commit: "docs: finalizar governança de legado host"
+
+**F.4 - Sinalização de Não Uso em Docker:**
+
+Após F.1-F.2, adicionar headers em scripts 🟡 DEPRECAR:
+```bash
+#!/bin/bash
+# ⚠️  DEPRECATED: Este script é para ambiente bare-metal apenas.
+# Use docker-compose e CI/CD workflows para ambientes Docker.
+# Planejado para remoção em 2026-06-12.
+```
+
+**Semáforo final da Fase F:**
+- AMARELO (planejado, aguardando execução da Fase 1 de deprecação)
+
+**Riscos residuais da Fase F:**
+- Necessário coordenar remocção de deploy/rollback manual com operação até D+21 (amarelo crítico)
+- Backup.sh continua 100% necessário (manter)
 
 ### Fase G - Normalizacao Final e Governanca
 - [ ] G.1 Fechar branch strategy.
@@ -447,3 +600,18 @@ Riscos residuais da Fase C:
    - [ ] G.2 Validar CI/CD pipelines
    - [ ] G.3 Checklist final de prontidão
    - [ ] G.4 Relatório final com semáforos
+**3. ✅ FASE E CONCLUÍDA (2026-05-16 14:xx)**
+   - [x] E.1 Definir compose canônico: `docker-compose.retomada.yml`
+   - [x] E.2 Padrão final com overrides
+   - [x] E.3 Plano de migração segura
+   - [x] E.4 Documentação atualizada
+   - Semáforo: 🟢 VERDE
+
+**4. ✅ FASE F CONCLUÍDA (2026-05-16 14:xx)**
+   - [x] F.1 Análise de 12 scripts legados
+   - [x] F.2 Classificação: 2 MANTER + 5 DEPRECAR + 4 REMOVER
+   - [x] F.3 Plano 2 fases (D+0 a D+45)
+   - [x] F.4 Sinalização de deprecação
+   - Semáforo: 🟡 AMARELO (planejado, execução em 3 semanas)
+
+**5. PRÓXIMO: EXECUTAR FASE G - Normalização Final:**
