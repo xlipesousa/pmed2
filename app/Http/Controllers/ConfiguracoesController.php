@@ -96,6 +96,8 @@ class ConfiguracoesController extends Controller
             $logoDir = storage_path('app/public');
             $logoPath = $logoDir . '/logo.png';
             $logoBackupPath = $logoDir . '/logo_backup.png';
+            $publicLogoDir = public_path('img');
+            $publicLogoPath = $publicLogoDir . '/logo.png';
 
             if (!is_dir($logoDir)) {
                 mkdir($logoDir, 0775, true);
@@ -108,6 +110,12 @@ class ConfiguracoesController extends Controller
             $img = $manager->read($logo->getRealPath());
             $img->cover(130, 130);
             $img->save($logoPath);
+
+            if (!is_dir($publicLogoDir)) {
+                mkdir($publicLogoDir, 0775, true);
+            }
+
+            copy($logoPath, $publicLogoPath);
         }
         
         // Processar o favicon caso tenha sido enviado
