@@ -80,13 +80,18 @@ jobs:
       - name: Preparar chave SSH de produção
         run: |
           set -euo pipefail
+          if [ -z "${{ secrets.PMED2_PROD_SSH_KNOWN_HOSTS }}" ]; then
+            echo "Secret PMED2_PROD_SSH_KNOWN_HOSTS não definido. Configure a entrada pinada de known_hosts."
+            exit 1
+          fi
+
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           cat > ~/.ssh/pmed2_prod <<'EOF'
           ${{ secrets.PMED2_PROD_SSH_KEY }}
           EOF
           chmod 600 ~/.ssh/pmed2_prod
-          ssh-keyscan -H "${{ secrets.PMED2_PROD_SSH_HOST }}" >> ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.PMED2_PROD_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
       - name: Testar SSH (produção)
@@ -221,3 +226,10 @@ jobs:
             curl -fsS http://127.0.0.1/health >/dev/null
             curl -I http://127.0.0.1/login | head -n 1
           '
+
+      - name: Limpar material SSH sensível (produção)
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -f ~/.ssh/pmed2_prod
+          rm -f ~/.ssh/known_hosts
