@@ -21,7 +21,7 @@ Com a evolução da governança de entrega, essa estratégia foi substituída po
 - Maior rastreabilidade/auditabilidade do processo de atualização no pipeline.
 
 ## Referências
-- Governança de deploy: [DEPLOY.md](../DEPLOY.md)
+- Governança de deploy: [producao-governanca-checklist.md](producao-governanca-checklist.md)
 - Plano de remoção controlada: [plano-refatoracao.md](../plano-refatoracao.md)
 
 ## Observação
