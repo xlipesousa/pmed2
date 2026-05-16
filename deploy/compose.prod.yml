@@ -110,6 +110,9 @@ services:
       QUEUE_CONNECTION: redis
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
+      BACKUP_SCHEDULE_TIME: ${BACKUP_SCHEDULE_TIME:-02:00}
+      BACKUP_DIR: ${BACKUP_DIR:-/var/www/html/storage/app/backups}
       RUN_MIGRATIONS: "false"
       RUN_STORAGE_LINK: "false"
     depends_on:

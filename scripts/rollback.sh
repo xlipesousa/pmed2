@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
+# WARNING: DEPRECATED for bare-metal operation.
+# Preferred path: Docker Compose + CI/CD workflows.
+# Planned removal window: 2026-06 (Phase F).
 set -euo pipefail
+
+echo "[DEPRECATED] rollback.sh e contingencia bare-metal. Priorize fluxo Docker/CI-CD." >&2
 
 APP_BASE="/var/www/pmed2"
 RELEASES="$APP_BASE/releases"

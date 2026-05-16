@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
+# WARNING: DEPRECATED for bare-metal operation.
+# Preferred path: Docker Compose + CI/CD workflows.
+# Planned removal window: 2026-06 (Phase F).
 set -euo pipefail
 umask 0002
+
+echo "[DEPRECATED] deploy.sh e contingencia bare-metal. Priorize fluxo Docker/CI-CD." >&2
 
 TAG="${1:?Uso: deploy.sh <tag-semver>}"
 APP_BASE="/var/www/pmed2"

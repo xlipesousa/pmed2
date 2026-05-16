@@ -1,11 +1,17 @@
 #!/bin/bash
 
+# WARNING: DEPRECATED for bare-metal operation.
+# Preferred path: Docker Compose + CI/CD workflows.
+# Planned removal window: 2026-06 (Phase F).
+
 ################################################################################
 # PMED2 - Sistema de Gestao de Faturas Hospitalares
 # Script de Instalacao Automatizada (refatorado)
 ################################################################################
 
 set -euo pipefail
+
+echo "[DEPRECATED] install.sh e fallback bare-metal. Priorize fluxo Docker/CI-CD." >&2
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

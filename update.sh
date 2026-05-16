@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# WARNING: DEPRECATED for bare-metal operation.
+# Preferred path: Docker Compose + CI/CD workflows.
+# Planned removal window: 2026-06 (Phase F).
+
 ################################################################################
 # PMED2 - Sistema de Gestão de Faturas Hospitalares
 # Script de Atualização do Sistema
@@ -17,6 +21,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+echo -e "${YELLOW}[DEPRECATED]${NC} update.sh e fallback bare-metal. Priorize fluxo Docker/CI-CD." >&2
 
 # Função para imprimir mensagens
 print_message() {

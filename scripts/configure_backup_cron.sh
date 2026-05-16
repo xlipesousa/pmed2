@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
+# WARNING: DEPRECATED for host cron operation.
+# Preferred path: scheduler service in Docker stack.
+# Planned removal window: 2026-06 (Phase F).
 set -euo pipefail
+
+echo "[DEPRECATED] configure_backup_cron.sh e fallback host cron. Migrar para scheduler Docker." >&2
 
 APP_BASE="${APP_BASE:-/var/www/pmed2}"
 SCHEDULE="${1:-0 2 * * *}"

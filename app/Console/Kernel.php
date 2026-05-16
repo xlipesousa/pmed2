@@ -18,7 +18,13 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        if ((string) env('BACKUP_ENABLED', 'true') === 'true') {
+            $schedule
+                ->exec('bash '.escapeshellarg(base_path('scripts/backup.sh')))
+                ->dailyAt((string) env('BACKUP_SCHEDULE_TIME', '02:00'))
+                ->withoutOverlapping()
+                ->appendOutputTo(storage_path('logs/backup-scheduler.log'));
+        }
     }
 
     /**

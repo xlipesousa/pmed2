@@ -52,6 +52,7 @@ RUN apk add --no-cache \
     libjpeg-turbo \
     freetype \
     bash \
+  mariadb-client \
     curl \
   && apk add --no-cache --virtual .build-deps \
     icu-dev \

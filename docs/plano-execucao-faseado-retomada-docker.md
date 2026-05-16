@@ -765,55 +765,41 @@ Riscos residuais da Fase C:
 
 ---
 
-### Proximas Acoes Imediatas - 2026-05-16
+## Estado Atual Consolidado - 2026-05-16 (pos-merge)
 
-**Sequência recomendada:**
+Resumo executivo:
+- Merge concluido: `refactor/remove-upgrade-web-phase1` integrado em `main`.
+- Convergencia de branches confirmada: `origin/main` e `origin/refactor/remove-upgrade-web-phase1` em `0/0`.
+- Hardening de seguranca em CI/CD aplicado e versionado.
 
-**1. ✅ FASE B CONCLUÍDA (2026-05-16 12:42)**
-   - [x] Branch renomeada e sincronizada
-   - [x] Docker stack validada
-   - [x] Push para upstream concluído
-   - [x] Testes finais OK
+Evidencias Git:
+- Commit de hardening em CI/CD: `46939c2b`.
+- Branches principais convergidas no mesmo HEAD.
+- Working tree limpo no momento da consolidacao.
 
+Atualizacao das fases:
+- Fase A: VERDE (concluida)
+- Fase B: VERDE (concluida)
+- Fase C: VERDE (concluida)
+- Fase D: VERDE (concluida)
+- Fase E: VERDE (concluida)
+- Fase F: AMARELO (execução operacional iniciada: F.1-F.4 concluídas; janela de descomissionamento em andamento)
+- Fase G: VERDE (concluida)
 
-**2. ✅ FASE D CONCLUÍDA (2026-05-16 14:xx)**
-   - [x] D.1 Classificar sensíveis por severidade
-   - [x] D.2 Remover schema SQL sensível de /public
-   - [x] D.3 Executar plano de resposta
-   - [x] D.4 Publicar matriz de sensíveis
-   - Semáforo: 🟢 VERDE
-   - Commit: `e206f92d`
+Atualizacao de seguranca operacional (CI/CD):
+- `cd-homolog.yml`: host SSH pinado via `PMED2_HOM_SSH_KNOWN_HOSTS` e limpeza de chave ao final do job.
+- `cd-prod.yml`: host SSH pinado via `PMED2_PROD_SSH_KNOWN_HOSTS` e limpeza de chave ao final do job.
+- `docker-build.yml`: menor privilegio aplicado com separacao de job de PR (read) e job de publish (write).
 
-**3. PRÓXIMO: EXECUTAR FASE E - Convergencia Compose:**
-**3. PARALELO: EXECUTAR FASE E - Convergencia Compose (com D):**
-   - [ ] E.1 Decidir compose canônico (docker-compose.retomada.yml vs docker-compose.yml)
-   - [ ] E.2 Definir padrão final com overrides
-   - [ ] E.3 Planejar migração segura
-   - [ ] E.4 Atualizar documentação
+Pendencias reais (pos-merge):
+- (a) Manter cronograma de remoção (Fase F).
+- (b) Concluida: backup migrado para scheduler Docker via `app/Console/Kernel.php` executando `scripts/backup.sh` com variaveis `BACKUP_ENABLED`, `BACKUP_SCHEDULE_TIME` e `BACKUP_DIR` nos arquivos compose.
+- (b.1) `scripts/configure_backup_cron.sh` permanece apenas como fallback legado e esta marcado como deprecated.
+- (b.2) Validacao runtime concluida em Docker: backup gerado com sucesso em `storage/app/backups/db_pmed2_2026-05-16_210734.sql.gz` pelo container scheduler.
+- (c) Confirmar secrets known_hosts (PMED2_HOM_SSH_KNOWN_HOSTS e PMED2_PROD_SSH_KNOWN_HOSTS).
+Semaforo atual do projeto:
+- AMARELO
 
-**4. PARALELO: EXECUTAR FASE F - Legado e Impacto (com D e E):**
-   - [ ] F.1 Analisar impacto de scripts
-   - [ ] F.2 Classificar: remover/manter/deprecar
-   - [ ] F.3 Plano de 2 fases (deprecar → remover)
-   - [ ] F.4 Marcar descontinuados
-
-**5. FINAL: FECHAR COM FASE G - Normalização Final (após C, D, E, F):**
-   - [ ] G.1 Fechar branch strategy
-   - [ ] G.2 Validar CI/CD pipelines
-   - [ ] G.3 Checklist final de prontidão
-   - [ ] G.4 Relatório final com semáforos
-**3. ✅ FASE E CONCLUÍDA (2026-05-16 14:xx)**
-   - [x] E.1 Definir compose canônico: `docker-compose.retomada.yml`
-   - [x] E.2 Padrão final com overrides
-   - [x] E.3 Plano de migração segura
-   - [x] E.4 Documentação atualizada
-   - Semáforo: 🟢 VERDE
-
-**4. ✅ FASE F CONCLUÍDA (2026-05-16 14:xx)**
-   - [x] F.1 Análise de 12 scripts legados
-   - [x] F.2 Classificação: 2 MANTER + 5 DEPRECAR + 4 REMOVER
-   - [x] F.3 Plano 2 fases (D+0 a D+45)
-   - [x] F.4 Sinalização de deprecação
-   - Semáforo: 🟡 AMARELO (planejado, execução em 3 semanas)
-
-**5. PRÓXIMO: EXECUTAR FASE G - Normalização Final:**
+Justificativa do semaforo atual:
+- Trilha tecnica de retomada, merge e hardening CI/CD concluida.
+- Restam atividades de governanca e descomissionamento de legado previstas na Fase F.
