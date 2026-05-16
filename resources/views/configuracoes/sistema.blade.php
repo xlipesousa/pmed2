@@ -27,7 +27,7 @@
                             <div class="form-group">
                                 <label>Logo Atual</label>
                                 <div class="text-center p-3 bg-white border rounded">
-                                    <img src="{{ file_exists(public_path('storage/logo.png')) ? asset('storage/logo.png') : asset('vendor/adminlte/dist/img/AdminLTELogo.png') }}?v={{ time() }}" 
+                                     <img src="{{ file_exists(public_path('img/logo.png')) ? asset('img/logo.png') : asset('vendor/adminlte/dist/img/AdminLTELogo.png') }}?v={{ time() }}" 
                                          alt="Logo Atual" class="img-fluid" style="max-width: 130px;">
                                     <p class="text-muted mt-2">Dimensões recomendadas: 130x130 pixels</p>
                                 </div>
