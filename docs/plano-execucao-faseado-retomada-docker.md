@@ -113,14 +113,15 @@ Regra de acompanhamento:
 - [x] B.3 Decidir padronizacao da nomenclatura da branch local.
 - [x] B.4 Produzir parecer final de merge readiness com precondicoes.
 
-**Status: AMARELO (4 precondicoes pendentes de execucao)**
-- Precondiciones a executar:
-  1. Renomear branch local para refactor/remove-upgrade-web-phase1
-  2. Validar docker final (docker ps, /health, migrate:status)
-  3. Push commits para upstream
-  4. Executar validacao final de testes
-- Consolidacao realizada: 5 commits novos consolidados + 4 anteriores = 9 total
-- Git status: clean
+**Status: VERDE (concluido - 2026-05-16 12:42)**
+- ✅ Branch renomeada: retomada/docker-homolog → refactor/remove-upgrade-web-phase1
+- ✅ Docker stack validada: 6/6 containers UP (db healthy, nginx healthy)
+- ✅ Health endpoint: HTTP 200 + payload OK
+- ✅ Migrations: Todas em estado "Ran"
+- ✅ Cache limpo e rebuild concluído
+- ✅ Push para upstream: Sincronizado (0 ahead)
+- ✅ Commits: 10 a frente de main (inclui 6 novos consolidados)
+- ✅ Checksum HEAD: d0fdb661 [origin/refactor/remove-upgrade-web-phase1]
 
 ### Fase C - Saneamento Git
 - [x] C.1 Remover tracking indevido, se existir.
@@ -375,30 +376,31 @@ Riscos residuais da Fase C:
 
 **Sequência recomendada:**
 
-**1. CONCLUIR PRECONDIÇÕES DE FASE B (antes de merge):**
-   - [ ] Renomear branch local: `git branch -m refactor/remove-upgrade-web-phase1`
-   - [ ] Validar Docker: `docker ps`, `curl http://localhost:8080/health`, `docker exec pmed2r-app php artisan migrate:status`
-   - [ ] Push commits: `git push -u origin refactor/remove-upgrade-web-phase1`
+**1. ✅ FASE B CONCLUÍDA (2026-05-16 12:42)**
+   - [x] Branch renomeada e sincronizada
+   - [x] Docker stack validada
+   - [x] Push para upstream concluído
+   - [x] Testes finais OK
 
-**2. EXECUTAR FASE D - Inventario de Sensiveis (após B.3):**
+**2. PRÓXIMO: EXECUTAR FASE D - Inventario de Sensiveis:**
    - [ ] D.1 Classificar sensíveis por severidade
    - [ ] D.2 Decidir estratégia para /public/schema-pmed2*.sql (remover vs mover)
    - [ ] D.3 Executar plano de resposta
    - [ ] D.4 Publicar matriz de sensíveis
 
-**3. EXECUTAR FASE E - Convergencia Compose (paralelo com D):**
+**3. PARALELO: EXECUTAR FASE E - Convergencia Compose (com D):**
    - [ ] E.1 Decidir compose canônico (docker-compose.retomada.yml vs docker-compose.yml)
    - [ ] E.2 Definir padrão final com overrides
    - [ ] E.3 Planejar migração segura
    - [ ] E.4 Atualizar documentação
 
-**4. EXECUTAR FASE F - Legado e Impacto (paralelo):**
+**4. PARALELO: EXECUTAR FASE F - Legado e Impacto (com D e E):**
    - [ ] F.1 Analisar impacto de scripts
    - [ ] F.2 Classificar: remover/manter/deprecar
    - [ ] F.3 Plano de 2 fases (deprecar → remover)
    - [ ] F.4 Marcar descontinuados
 
-**5. FECHAR COM FASE G - Normalização Final (última):**
+**5. FINAL: FECHAR COM FASE G - Normalização Final (após C, D, E, F):**
    - [ ] G.1 Fechar branch strategy
    - [ ] G.2 Validar CI/CD pipelines
    - [ ] G.3 Checklist final de prontidão
