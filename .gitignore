@@ -236,3 +236,4 @@ planos/
 /RESUMO-DEPLOY.md
 /README.laravel.md
 /plano-ci-cd.md
+public/*.sql
