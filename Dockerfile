@@ -17,7 +17,9 @@ RUN apk add --no-cache \
     bash \
     $PHPIZE_DEPS \
   && docker-php-ext-configure gd --with-freetype --with-jpeg \
-  && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring bcmath intl zip gd opcache
+  && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring bcmath intl zip gd opcache \
+  && pecl install redis \
+  && docker-php-ext-enable redis
 
 COPY --from=composer_bin /usr/bin/composer /usr/bin/composer
 
@@ -61,6 +63,8 @@ RUN apk add --no-cache \
     $PHPIZE_DEPS \
   && docker-php-ext-configure gd --with-freetype --with-jpeg \
   && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring bcmath intl zip gd opcache \
+  && pecl install redis \
+  && docker-php-ext-enable redis \
   && apk del .build-deps
 
 COPY --from=composer_bin /usr/bin/composer /usr/bin/composer
