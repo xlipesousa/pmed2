@@ -137,12 +137,50 @@ Regra de acompanhamento:
 - Checksum HEAD: dacc1b66d62fd327ac39227886ffb8b96d586dec
 
 ### Fase D - Inventario de Sensiveis e Politica de Ignore
-- [ ] D.1 Classificar sensiveis por severidade.
-- [ ] D.2 Tratar excecoes perigosas de SQL no repositório.
-- [ ] D.3 Executar plano de resposta para sensiveis rastreados.
-- [ ] D.4 Publicar matriz Arquivo x Risco x Acao x Responsavel.
+@@- [x] D.1 Classificar sensiveis por severidade.
+@@- [x] D.2 Tratar excecoes perigosas de SQL no repositório.
+@@- [x] D.3 Executar plano de resposta para sensiveis rastreados.
+@@- [x] D.4 Publicar matriz Arquivo x Risco x Acao x Responsavel.
 
+@@**Status: VERDE (concluido - 2026-05-16 14:xx)**
 ### Fase E - Convergencia Compose e Arquitetura Docker
+@@**D.1 - Classificação de Sensíveis por Severidade:**
+@@- Escaneado todo repositório em busca de: credenciais, chaves, dumps SQL, segredos
+@@- Resultado: `.env` (não rastreado ✅), `.secrets/*` (não rastreado ✅), scripts sensíveis (rastreados mas seguros)
+@@- 🔴 CRÍTICA identificada: `public/schema-pmed2.sql` e `public/schema-pmed2-anulacao.sql` rastreados
+@@
+@@**D.2 - Tratamento de SQL Sensível:**
+@@- Decisão: Opção A (remover do repositório)
+@@- Ação executada:
+@@  1. `git rm --cached public/schema-pmed2.sql public/schema-pmed2-anulacao.sql`
+@@  2. Adicionado `public/*.sql` ao `.gitignore`
+@@  3. Commit: `e206f92d` - "chore(security): remover schemas SQL sensíveis do repositório público"
+@@- Resultado: Arquivos mantidos no disco, removidos do tracking
+@@
+@@**D.3 - Plano de Resposta:**
+@@- Todos os sensíveis rastreados foram tratados (apenas os 2 SQL removidos)
+@@- Nenhuma credencial real, token ou chave exposta em repositório ✅
+@@
+@@**D.4 - Matriz de Sensíveis:**
+@@
+@@| Arquivo | Tipo | Severidade | Status Git | Ação |
+@@|---------|------|-----------|-----------|------|
+@@| `public/schema-pmed2.sql` | Estrutura BD | 🔴 CRÍTICA | ❌ Removido | Mover para local privado se precisar de referência |
+@@| `public/schema-pmed2-anulacao.sql` | Estrutura BD | 🔴 CRÍTICA | ❌ Removido | Mover para local privado se precisar de referência |
+@@| `.env` | Credenciais | 🔴 CRÍTICA | ✅ Não rastreado | Manter fora do Git (via .gitignore) |
+@@| `.env.example` | Modelo | 🟢 BAIXA | ✅ Rastreado | Manter (sem valores reais) |
+@@| `.secrets/*` | Segredos | 🔴 CRÍTICA | ✅ Não rastreado | Manter fora do Git (via .gitignore) |
+@@| `config/database.php` | Código | 🟢 BAIXA | ✅ Rastreado | Implementa fallback seguro para senhas (OK) |
+@@| `scripts/backup.sh` | Script | 🟡 MÉDIA | ✅ Rastreado | Usa variáveis de env (OK) |
+@@| `scripts/normalize_env_passwords.sh` | Script | 🟡 MÉDIA | ✅ Rastreado | Manipula .env local (OK) |
+@@| `scripts/bateria_operacional.sh` | Script | 🟡 MÉDIA | ✅ Rastreado | Extrai variáveis de env (OK) |
+@@| `docs/dev-context/context.md` | Documentação | 🟡 MÉDIA | ✅ Rastreado | Documenta estratégia (OK) |
+@@
+@@Semaforo final da Fase D:
+@@- VERDE
+@@
+@@Riscos residuais da Fase D:
+@@- Nenhum sensível crítico exposto em repositório ✅
 - [ ] E.1 Definir compose canonico de desenvolvimento.
 - [ ] E.2 Definir padrao final com overrides e depreciacao formal.
 - [ ] E.3 Planejar migracao segura (janela, rollback, validacao).
@@ -382,12 +420,16 @@ Riscos residuais da Fase C:
    - [x] Push para upstream concluído
    - [x] Testes finais OK
 
-**2. PRÓXIMO: EXECUTAR FASE D - Inventario de Sensiveis:**
-   - [ ] D.1 Classificar sensíveis por severidade
-   - [ ] D.2 Decidir estratégia para /public/schema-pmed2*.sql (remover vs mover)
-   - [ ] D.3 Executar plano de resposta
-   - [ ] D.4 Publicar matriz de sensíveis
 
+**2. ✅ FASE D CONCLUÍDA (2026-05-16 14:xx)**
+   - [x] D.1 Classificar sensíveis por severidade
+   - [x] D.2 Remover schema SQL sensível de /public
+   - [x] D.3 Executar plano de resposta
+   - [x] D.4 Publicar matriz de sensíveis
+   - Semáforo: 🟢 VERDE
+   - Commit: `e206f92d`
+
+**3. PRÓXIMO: EXECUTAR FASE E - Convergencia Compose:**
 **3. PARALELO: EXECUTAR FASE E - Convergencia Compose (com D):**
    - [ ] E.1 Decidir compose canônico (docker-compose.retomada.yml vs docker-compose.yml)
    - [ ] E.2 Definir padrão final com overrides
