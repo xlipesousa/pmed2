@@ -225,3 +225,14 @@ planos/
 
 # Prompt local de validacao pre-release (nao versionado)
 /validate.md
+
+# Contexto operacional local (nao versionado)
+/docs/dev-context/
+
+# Artefatos operacionais locais (raiz)
+/context.md
+/retomada-fase2-*.txt
+/DEPLOY.md
+/RESUMO-DEPLOY.md
+/README.laravel.md
+/plano-ci-cd.md
