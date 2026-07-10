@@ -1,6 +1,6 @@
 # PMED2 - Sistema de Gestão de Faturas Hospitalares
 # Requirements - Dependências e Requisitos do Sistema
-# Atualizado em: 23/12/2025
+# Atualizado em: 10/07/2026
 
 # ============================================
 # REQUISITOS DE SISTEMA OPERACIONAL
