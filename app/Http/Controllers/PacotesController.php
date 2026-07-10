@@ -32,7 +32,20 @@ class PacotesController extends Controller
         }
         
         // Buscar todos os pacotes com relacionamentos, sem filtrar por localização
-        $pacotes = Pacote::with(['ocsPsa', 'tipoPacote', 'tipoConta'])
+        // (a view renderiza as 6 abas a partir desta mesma coleção). Seleciona apenas
+        // as colunas que resources/views/pacotes/index.blade.php realmente usa — sem
+        // isso, cada linha carrega ~20 colunas não usadas (vários campos de texto
+        // longo) e uma relação (tipoConta) que a view nunca lê, o que estoura o
+        // memory_limit do PHP em produção conforme a tabela pacotes cresce.
+        $pacotes = Pacote::select([
+                'id', 'ocs_psa_id', 'tipo_id', 'numero_fatura', 'data_entrada',
+                'valor_fatura', 'valor_glosa', 'valor_pos_lisura', 'valor_pendente',
+                'estado_geral', 'estado_glosa', 'localizacao_atual', 'localizacao_fisica',
+            ])
+                        ->with([
+                            'ocsPsa:id,nome',
+                            'tipoPacote:id,nome',
+                        ])
                         ->orderBy('id', 'desc')
                         ->get();
 

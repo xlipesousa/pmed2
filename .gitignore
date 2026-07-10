@@ -13,6 +13,11 @@
 /.phpunit.cache
 
 # ============================================
+# GRAPHIFY (mapa de conhecimento gerado localmente)
+# ============================================
+/graphify-out/
+
+# ============================================
 # ARQUIVOS SENSÍVEIS (SEGURANÇA)
 # ============================================
 # Arquivos de ambiente com senhas e tokens
@@ -198,7 +203,6 @@ node_modules
 
 # Planos dev
 planos/
-!planos/plano-retomada.md
 # Plano de migracao (nao versionado)
 /plano.md
 
@@ -237,3 +241,17 @@ planos/
 /README.laravel.md
 /plano-ci-cd.md
 public/*.sql
+
+# ============================================
+# ÁREA DE TRABALHO DO AGENTE / OPERACIONAL LOCAL
+# (não versionado — planejamento, docs internas e scripts ad-hoc)
+# ============================================
+/.claude/
+/docs/
+
+# scripts/ operacionais são locais ao ambiente onde rodam (host de prod,
+# runner), exceto backup.sh: é executado em runtime pelo container
+# `scheduler` (app/Console/Kernel.php) e entra na imagem via `COPY . .`
+# no Dockerfile — precisa continuar versionado.
+/scripts/*
+!/scripts/backup.sh
