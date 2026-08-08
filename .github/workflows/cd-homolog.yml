@@ -61,9 +61,11 @@ jobs:
           ssh -i ~/.ssh/pmed2_homolog -o BatchMode=yes -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" "hostname && whoami"
 
       - name: Validar segredo DB (homolog)
+        env:
+          DB_PASSWORD: ${{ secrets.PMED2_HOM_DB_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -z "${{ secrets.PMED2_HOM_DB_PASSWORD }}" ]; then
+          if [ -z "${DB_PASSWORD}" ]; then
             echo "Secret PMED2_HOM_DB_PASSWORD não definido."
             exit 1
           fi
@@ -79,9 +81,11 @@ jobs:
           scp -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes docker/nginx/default.conf "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}:/var/www/pmed2/docker/nginx/default.conf"
 
       - name: Instalar segredo DB por arquivo (homolog)
+        env:
+          DB_PASSWORD: ${{ secrets.PMED2_HOM_DB_PASSWORD }}
         run: |
           set -euo pipefail
-          printf '%s' "${{ secrets.PMED2_HOM_DB_PASSWORD }}" | \
+          printf '%s' "${DB_PASSWORD}" | \
             ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" '
               set -euo pipefail
               umask 077
