@@ -153,19 +153,40 @@ homolog e produção.
 
 ---
 
-### ADR-08 — MySQL escuta na bridge do Docker, com grant restrito à subnet
+### ADR-08 — MySQL escuta na subnet Docker fixa do compose, com grant restrito a ela
 **Contexto:** `DB_HOST=127.0.0.1` no `shared/.env`. Dentro de um container, isso aponta para o **próprio
 container**. O MySQL do host só escuta em loopback e os grants existem apenas para `pmed2user@127.0.0.1`
 e `pmed2user@localhost`.
 
-**Decisão:** `extra_hosts: ["host.docker.internal:host-gateway"]` no compose + `bind-address =
-127.0.0.1,172.17.0.1` no MySQL + grant para `pmed2user@'172.17.0.%'`.
+**Decisão original (revisada):** a primeira versão do script de provisionamento descobria o gateway via
+`ip -4 addr show docker0` (bridge padrão, tipicamente `172.17.0.1`) e configurava `bind-address`/grant
+com base nele. **Isso estava errado** — `docker0` é a bridge *padrão* do Docker; `deploy/compose.homolog.yml`
+declara uma rede **custom** própria (`networks: pmed2:`), que por padrão recebe uma subnet *diferente*,
+atribuída dinamicamente pelo Docker só na primeira vez que `docker compose up` roda. Configurar o MySQL
+para a subnet de `docker0` deixaria o grant apontando para uma rede que os containers reais do compose
+nunca usam — um gate de conectividade (T2.6) rodado com `docker run` "solto" (sem `--network`) também cai
+na bridge padrão por default, então **passaria mesmo com o grant errado**, mascarando o problema até o
+primeiro deploy de verdade.
 
-**Razão:** é o caminho de menor exposição. `bind-address = 0.0.0.0` funcionaria, mas com `ufw` inativo
-exporia o MySQL na rede da empresa.
+**Correção aplicada:** `deploy/compose.homolog.yml` e `deploy/compose.prod.yml` agora fixam a subnet da
+rede `pmed2` explicitamente (`networks.pmed2.ipam.config.subnet` — `10.219.10.0/24` em homolog,
+`10.219.20.0/24` em produção, propositalmente diferentes por higiene). Fora do range que o Docker usa
+para auto-atribuição (`172.17.0.0/16`–`172.31.0.0/16`), evitando qualquer colisão futura. Com a subnet
+fixa, `bind-address = 127.0.0.1,10.219.10.1` e o grant para `pmed2user@'10.219.10.%'` ficam corretos
+*antes* de qualquer container existir — não dependem de descoberta em runtime. O script de provisionamento
+(`scripts/provisionar-docker-homolog.sh`) usa essa constante diretamente, e o gate T2.6 passou a rodar
+numa rede Docker de teste criada com a mesma subnet (não mais na bridge padrão), para validar o caminho
+real.
 
-**Consequência para produção:** repetir, **confirmando o IP real da bridge naquele host**
-(`ip -4 addr show docker0`) — não presumir `172.17.0.1`. Em produção, considerar também ativar `ufw`.
+**Consequência para produção:** já resolvido preventivamente — `compose.prod.yml` já usa a subnet fixa
+`10.219.20.0/24`. Não presumir `docker0`; usar sempre a subnet declarada no compose como fonte da verdade.
+Em produção, considerar também ativar `ufw`.
+
+**Decisão relacionada:** `COMPOSE_PROJECT_NAME=pmed2` também foi fixado (exportado) em todo lugar que
+invoca `docker compose` (`cd-homolog.yml`, `scripts/verificar-stack-homolog.sh`) — sem isso, o nome do
+projeto (que prefixa volumes e a rede) dependeria do diretório de trabalho da sessão SSH no momento da
+execução, podendo variar entre deploys e fazer o Compose recriar volumes do zero em vez de reaproveitar
+o volume de código já populado pelo `app-init`.
 
 ---
 
@@ -207,7 +228,7 @@ Pré-condições obrigatórias:
 - [ ] Backup do banco de produção **verificado com `gunzip -t`**, guardado fora de `/var/www`
 - [ ] Snapshot da VM de produção
 - [ ] Confirmado `APP_KEY` em `/var/www/pmed2/shared/.env` de produção (ADR-06)
-- [ ] IP real da bridge do host de produção confirmado (ADR-08)
+- [x] Subnet fixa da rede `pmed2` já definida em `compose.prod.yml` (`10.219.20.0/24`, ADR-08) — não depende de descoberta em runtime
 - [ ] Secret `PMED2_PROD_SSH_KNOWN_HOSTS` regenerado **a partir do runner** (ver §6)
 
 Sequência: mesma do plano de homologação (F0→F5), trocando `homolog`→`prod`, com duas diferenças:

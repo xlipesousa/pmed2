@@ -13,7 +13,9 @@ services:
     image: ${IMAGE_NAME:-ghcr.io/xlipesousa/pmed2}:${IMAGE_TAG:?IMAGE_TAG obrigatório}
     container_name: pmed2-app-prod
     restart: unless-stopped
+    user: "0:0"
     environment:
+      APP_KEY: ${APP_KEY:?APP_KEY obrigatório}
       APP_ENV: production
       APP_DEBUG: ${APP_DEBUG:-false}
       APP_URL: ${APP_URL:?APP_URL obrigatório}
@@ -29,6 +31,8 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
       RUN_STORAGE_LINK: ${RUN_STORAGE_LINK:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       app-init:
         condition: service_completed_successfully
@@ -48,7 +52,7 @@ services:
     depends_on:
       - app
     ports:
-      - "${APP_HTTP_PORT:-80}:80"
+      - "127.0.0.1:${APP_HTTP_PORT:-80}:80"
     volumes:
       - ../docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - pmed2_app_code_prod:/var/www/html:ro
@@ -64,8 +68,10 @@ services:
     image: ${IMAGE_NAME:-ghcr.io/xlipesousa/pmed2}:${IMAGE_TAG:?IMAGE_TAG obrigatório}
     container_name: pmed2-queue-prod
     restart: unless-stopped
+    user: "0:0"
     command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=90"]
     environment:
+      APP_KEY: ${APP_KEY:?APP_KEY obrigatório}
       APP_ENV: production
       APP_DEBUG: ${APP_DEBUG:-false}
       DB_CONNECTION: mysql
@@ -80,6 +86,8 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       RUN_MIGRATIONS: "false"
       RUN_STORAGE_LINK: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       app-init:
         condition: service_completed_successfully
@@ -96,8 +104,10 @@ services:
     image: ${IMAGE_NAME:-ghcr.io/xlipesousa/pmed2}:${IMAGE_TAG:?IMAGE_TAG obrigatório}
     container_name: pmed2-scheduler-prod
     restart: unless-stopped
+    user: "0:0"
     command: ["php", "artisan", "schedule:work"]
     environment:
+      APP_KEY: ${APP_KEY:?APP_KEY obrigatório}
       APP_ENV: production
       APP_DEBUG: ${APP_DEBUG:-false}
       DB_CONNECTION: mysql
@@ -115,6 +125,8 @@ services:
       BACKUP_DIR: ${BACKUP_DIR:-/var/www/html/storage/app/backups}
       RUN_MIGRATIONS: "false"
       RUN_STORAGE_LINK: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       app-init:
         condition: service_completed_successfully
@@ -136,8 +148,16 @@ services:
     networks:
       - pmed2
 
+# Subnet fixa: sem isso o Docker atribui uma sub-rede dinâmica na primeira
+# subida (não é a do docker0/172.17.0.0), e o bind-address/grant do MySQL do
+# host (configurado antes de qualquer container existir) ficaria apontando
+# para uma sub-rede que não é a real. Diferente da de homolog (10.219.10.0/24)
+# por higiene, mesmo em servidores separados. Ver planos/guia-decisoes-producao.md ADR-08.
 networks:
   pmed2:
+    ipam:
+      config:
+        - subnet: 10.219.20.0/24
 
 volumes:
   pmed2_app_code_prod:
