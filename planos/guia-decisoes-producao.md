@@ -194,6 +194,21 @@ rede persistente (não mais numa rede efêmera de teste nem na bridge padrão), 
 configuração de host depende de um IP de rede Docker, a rede precisa ser criada explicitamente e cedo —
 nunca deixar para o compose criar implicitamente na hora do deploy.
 
+**Correção adicional — `host.docker.internal:host-gateway` não funciona com rede custom:** o gate T2.6,
+já testando na rede certa, ainda falhou ao vivo com `ERROR 2003: Can't connect ... (111)`. Causa:
+`--add-host=host.docker.internal:host-gateway` (usado em `extra_hosts` no compose e no próprio script)
+resolve para o gateway da bridge **padrão** do Docker (`docker0`, `172.17.0.1`), **não** para o gateway
+da rede custom `pmed2` a que o container está anexado — mesmo passando `--network` explicitamente.
+Confirmado com `getent hosts host.docker.internal` dentro de um container na rede `pmed2-homolog-net`:
+resolvia para `172.17.0.1`, onde nada escuta (MySQL só está em `127.0.0.1` e `10.219.10.1`), daí
+"connection refused". Como a subnet e o gateway da rede `pmed2` já são fixos e conhecidos, a correção foi
+parar de depender do valor mágico `host-gateway` e apontar `host.docker.internal` direto para o IP fixo:
+`extra_hosts: ["host.docker.internal:10.219.10.1"]` em vez de `["host.docker.internal:host-gateway"]`
+(mesma mudança em `compose.homolog.yml`, `compose.prod.yml` e no gate do script de provisionamento).
+Esse comportamento do Docker (host-gateway atrelado à bridge padrão, não à rede do container) não é
+documentado com clareza e teria quebrado o deploy real do mesmo jeito que quebrou o gate — o gate cumpriu
+exatamente a função de pegar isso antes de produção real ser afetada.
+
 **Consequência para produção:** já resolvido preventivamente — `compose.prod.yml` já usa a subnet fixa
 `10.219.20.0/24`. Não presumir `docker0`; usar sempre a subnet declarada no compose como fonte da verdade.
 Em produção, considerar também ativar `ufw`.

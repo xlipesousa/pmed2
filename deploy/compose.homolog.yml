@@ -31,8 +31,14 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
       RUN_STORAGE_LINK: ${RUN_STORAGE_LINK:-true}
+    # NÃO usar "host-gateway": esse valor mágico resolve para o gateway da
+    # bridge PADRÃO (docker0, 172.17.0.1), não para a rede custom "pmed2" em
+    # que este container está (confirmado ao vivo: MySQL escuta em
+    # 10.219.10.1, mas host.docker.internal resolvia para 172.17.0.1, onde
+    # nada escuta - "connection refused"). Como a subnet da rede pmed2 já é
+    # fixa (ver networks.pmed2 mais abaixo), aponta direto pro gateway real.
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:10.219.10.1"
     depends_on:
       app-init:
         condition: service_completed_successfully
@@ -86,8 +92,14 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       RUN_MIGRATIONS: "false"
       RUN_STORAGE_LINK: "false"
+    # NÃO usar "host-gateway": esse valor mágico resolve para o gateway da
+    # bridge PADRÃO (docker0, 172.17.0.1), não para a rede custom "pmed2" em
+    # que este container está (confirmado ao vivo: MySQL escuta em
+    # 10.219.10.1, mas host.docker.internal resolvia para 172.17.0.1, onde
+    # nada escuta - "connection refused"). Como a subnet da rede pmed2 já é
+    # fixa (ver networks.pmed2 mais abaixo), aponta direto pro gateway real.
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:10.219.10.1"
     depends_on:
       app-init:
         condition: service_completed_successfully
@@ -125,8 +137,14 @@ services:
       BACKUP_DIR: ${BACKUP_DIR:-/var/www/html/storage/app/backups}
       RUN_MIGRATIONS: "false"
       RUN_STORAGE_LINK: "false"
+    # NÃO usar "host-gateway": esse valor mágico resolve para o gateway da
+    # bridge PADRÃO (docker0, 172.17.0.1), não para a rede custom "pmed2" em
+    # que este container está (confirmado ao vivo: MySQL escuta em
+    # 10.219.10.1, mas host.docker.internal resolvia para 172.17.0.1, onde
+    # nada escuta - "connection refused"). Como a subnet da rede pmed2 já é
+    # fixa (ver networks.pmed2 mais abaixo), aponta direto pro gateway real.
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:10.219.10.1"
     depends_on:
       app-init:
         condition: service_completed_successfully
