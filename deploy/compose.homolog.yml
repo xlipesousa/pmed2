@@ -148,15 +148,20 @@ services:
     networks:
       - pmed2
 
-# Subnet fixa: sem isso o Docker atribui uma sub-rede dinâmica na primeira
-# subida (não é a do docker0/172.17.0.0), e o bind-address/grant do MySQL do
-# host (configurado em T2.4/T2.5 antes de qualquer container existir) ficaria
-# apontando para uma sub-rede que não é a real. Ver planos/guia-decisoes-producao.md ADR-08.
+# Rede externa, criada pelo provisionamento (scripts/provisionar-docker-homolog.sh,
+# seção 2) ANTES do primeiro deploy: "docker network create --subnet=10.219.10.0/24
+# pmed2-homolog-net". Precisa existir de antemão porque o MySQL do host faz bind
+# no gateway dessa rede (10.219.10.1) - um IP só passa a existir numa interface
+# real quando a rede Docker é criada, e o MySQL não sobe se o bind-address
+# apontar para um IP que ainda não existe em nenhuma interface. Se o compose
+# criasse essa rede sozinho (no primeiro "up"), o MySQL teria sido configurado
+# cedo demais. "external: true" faz o compose REUSAR a rede já criada, em vez de
+# tentar criar a dele própria com a mesma subnet (o que Docker recusa - duas
+# redes não podem reivindicar a mesma subnet). Ver planos/guia-decisoes-producao.md ADR-08.
 networks:
   pmed2:
-    ipam:
-      config:
-        - subnet: 10.219.10.0/24
+    external: true
+    name: pmed2-homolog-net
 
 volumes:
   pmed2_app_code_homolog:

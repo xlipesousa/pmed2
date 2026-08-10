@@ -148,16 +148,16 @@ services:
     networks:
       - pmed2
 
-# Subnet fixa: sem isso o Docker atribui uma sub-rede dinâmica na primeira
-# subida (não é a do docker0/172.17.0.0), e o bind-address/grant do MySQL do
-# host (configurado antes de qualquer container existir) ficaria apontando
-# para uma sub-rede que não é a real. Diferente da de homolog (10.219.10.0/24)
-# por higiene, mesmo em servidores separados. Ver planos/guia-decisoes-producao.md ADR-08.
+# Rede externa, criada pelo provisionamento ANTES do primeiro deploy:
+# "docker network create --subnet=10.219.20.0/24 pmed2-prod-net". Precisa
+# existir de antemão porque o MySQL do host faz bind no gateway dessa rede
+# (10.219.20.1) - ver o mesmo raciocínio em deploy/compose.homolog.yml e
+# planos/guia-decisoes-producao.md ADR-08. Diferente da subnet de homolog
+# (10.219.10.0/24) por higiene, mesmo em servidores separados.
 networks:
   pmed2:
-    ipam:
-      config:
-        - subnet: 10.219.20.0/24
+    external: true
+    name: pmed2-prod-net
 
 volumes:
   pmed2_app_code_prod:

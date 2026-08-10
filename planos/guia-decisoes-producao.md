@@ -168,15 +168,31 @@ nunca usam — um gate de conectividade (T2.6) rodado com `docker run` "solto" (
 na bridge padrão por default, então **passaria mesmo com o grant errado**, mascarando o problema até o
 primeiro deploy de verdade.
 
-**Correção aplicada:** `deploy/compose.homolog.yml` e `deploy/compose.prod.yml` agora fixam a subnet da
-rede `pmed2` explicitamente (`networks.pmed2.ipam.config.subnet` — `10.219.10.0/24` em homolog,
-`10.219.20.0/24` em produção, propositalmente diferentes por higiene). Fora do range que o Docker usa
-para auto-atribuição (`172.17.0.0/16`–`172.31.0.0/16`), evitando qualquer colisão futura. Com a subnet
-fixa, `bind-address = 127.0.0.1,10.219.10.1` e o grant para `pmed2user@'10.219.10.%'` ficam corretos
-*antes* de qualquer container existir — não dependem de descoberta em runtime. O script de provisionamento
-(`scripts/provisionar-docker-homolog.sh`) usa essa constante diretamente, e o gate T2.6 passou a rodar
-numa rede Docker de teste criada com a mesma subnet (não mais na bridge padrão), para validar o caminho
-real.
+**Correção aplicada (v1 — subnet fixa via `ipam.config`, insuficiente sozinha):** primeiro fixamos a
+subnet da rede `pmed2` diretamente no compose (`networks.pmed2.ipam.config.subnet`), deixando o Docker
+criar a rede na primeira subida. **Isso ainda quebrou** — testado ao vivo no servidor: o MySQL não sobe
+com `bind-address` apontando para um IP que não existe em nenhuma interface de rede. `docker network
+create` (ou o primeiro `docker compose up`) é o que efetivamente cria a interface bridge e atribui o
+gateway; até isso acontecer, `10.219.10.1` não existe em lugar nenhum, e `systemctl restart mysql` falha
+("Job for mysql.service failed"). Como o provisionamento (T2.4, que configura o MySQL) roda **antes** do
+primeiro deploy (F3, que é quando o compose criaria a rede), o MySQL sempre seria configurado cedo demais.
+
+**Correção final aplicada:** a rede passou a ser **externa e persistente**, criada explicitamente pelo
+script de provisionamento (`docker network create --subnet=10.219.10.0/24 pmed2-homolog-net`, seção 2,
+**antes** do MySQL ser configurado na seção 3) — isso cria a interface bridge e o gateway imediatamente,
+mesmo sem nenhum container rodando. `deploy/compose.homolog.yml`/`compose.prod.yml` referenciam essa rede
+como `external: true`, então o `docker compose up` (F3) **reaproveita** a rede já criada em vez de tentar
+criar a dele própria — o que o Docker recusaria de qualquer forma (duas redes não podem reivindicar a
+mesma subnet simultaneamente). Subnets `10.219.10.0/24` (homolog) e `10.219.20.0/24` (produção),
+propositalmente diferentes por higiene, fora do range que o Docker usa para auto-atribuição
+(`172.17.0.0/16`–`172.31.0.0/16`). Com isso, `bind-address = 127.0.0.1,10.219.10.1` e o grant para
+`pmed2user@'10.219.10.%'` ficam corretos desde o provisionamento, e o gate T2.6 passou a rodar na mesma
+rede persistente (não mais numa rede efêmera de teste nem na bridge padrão), validando o caminho real.
+
+**Lição para produção:** subnet fixa sozinha (via `ipam.config`) não basta quando algo fora do Docker
+(o MySQL do host) depende do gateway existir *antes* do primeiro `docker compose up`. Sempre que uma
+configuração de host depende de um IP de rede Docker, a rede precisa ser criada explicitamente e cedo —
+nunca deixar para o compose criar implicitamente na hora do deploy.
 
 **Consequência para produção:** já resolvido preventivamente — `compose.prod.yml` já usa a subnet fixa
 `10.219.20.0/24`. Não presumir `docker0`; usar sempre a subnet declarada no compose como fonte da verdade.
