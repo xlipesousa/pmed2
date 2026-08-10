@@ -202,7 +202,8 @@ deploy-result.txt
 node_modules
 
 # Planos dev
-planos/
+/planos/*
+!/planos/guia-decisoes-producao.md
 # Plano de migracao (nao versionado)
 /plano.md
 
