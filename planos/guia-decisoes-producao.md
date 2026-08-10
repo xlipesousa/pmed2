@@ -260,7 +260,23 @@ Pré-condições obrigatórias:
 - [ ] Snapshot da VM de produção
 - [ ] Confirmado `APP_KEY` em `/var/www/pmed2/shared/.env` de produção (ADR-06)
 - [x] Subnet fixa da rede `pmed2` já definida em `compose.prod.yml` (`10.219.20.0/24`, ADR-08) — não depende de descoberta em runtime
+- [ ] **Criar a rede `pmed2-prod-net` explicitamente ANTES de configurar o MySQL** (`docker network create
+  --subnet=10.219.20.0/24 pmed2-prod-net`) — em homolog, pular esse passo e deixar o compose criar a rede
+  implicitamente causou o MySQL entrar em loop de crash (bind num IP que ainda não existia em nenhuma
+  interface). Ver ADR-08 e o Log de ocorrências de `ESTADO-MIGRACAO-HOMOLOG.md` (2026-08-10 18:53–19:13)
+  para o relato completo do incidente.
+- [ ] Confirmar que `extra_hosts` usa o IP fixo do gateway (`host.docker.internal:10.219.20.1`), **nunca**
+  `host.docker.internal:host-gateway` — esse valor mágico resolve para a bridge padrão do Docker, não
+  para a rede `pmed2`, e falha silenciosamente até o teste de conectividade real (confirmado ao vivo em
+  homolog, ver ADR-08)
 - [ ] Secret `PMED2_PROD_SSH_KNOWN_HOSTS` regenerado **a partir do runner** (ver §6)
+
+**Confirmado ao vivo em homologação (2026-08-10, F2 completa):** a sequência
+"instalar Docker → criar rede externa com subnet fixa → configurar bind-address do MySQL → grant →
+gate de conectividade com IP fixo (não `host-gateway`) → confirmar APP_KEY" rodou do início ao fim sem
+erros na segunda tentativa (depois de 2 incidentes corrigidos — ver ADR-08). O script
+`scripts/provisionar-docker-homolog.sh` é o roteiro de referência a adaptar para produção (trocar
+subnet/nomes de `homolog` para `prod`).
 
 Sequência: mesma do plano de homologação (F0→F5), trocando `homolog`→`prod`, com duas diferenças:
 1. `cd-prod.yml` é `workflow_dispatch` com environment `production` protegido — o disparo é manual e
