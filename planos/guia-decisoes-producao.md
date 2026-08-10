@@ -270,6 +270,20 @@ Pré-condições obrigatórias:
   para a rede `pmed2`, e falha silenciosamente até o teste de conectividade real (confirmado ao vivo em
   homolog, ver ADR-08)
 - [ ] Secret `PMED2_PROD_SSH_KNOWN_HOSTS` regenerado **a partir do runner** (ver §6)
+- [ ] **Usuário SSH de deploy de produção (secret `PMED2_PROD_SSH_USER`) adicionado ao grupo `docker`**
+  (`sudo usermod -aG docker <usuário>`) — em homolog, o Docker foi instalado como root via Teleport, mas
+  isso não adiciona automaticamente nenhum outro usuário ao grupo `docker`. Sem isso, o primeiro deploy
+  falha com `permission denied ... docker.sock`, mesmo com tudo mais correto.
+- [ ] **Secrets `PMED2_PROD_GHCR_USER`/`PMED2_PROD_GHCR_TOKEN` criados antes do primeiro disparo de
+  `cd-prod.yml`** — o pacote GHCR é privado; sem esses secrets o `docker login` do workflow fica
+  condicional e pula silenciosamente, e o `pull` falha com `unauthorized`. Gerar um PAT classic com
+  escopo `read:packages` (registrar validade para rotação futura — 90 dias em homolog).
+
+**Confirmado ao vivo em homologação (2026-08-10, F3 completa):** `cd-homolog.yml` fechou **100% verde
+de ponta a ponta** pela primeira vez na história do projeto, na 3ª tentativa (as duas primeiras
+falharam exatamente nos dois pontos acima — grupo `docker` e secrets GHCR — e foram corrigidas em
+minutos, sem precisar alterar nenhum código ou workflow). Essas duas pré-condições evitam repetir
+esse mesmo ciclo de tentativa-e-erro em produção.
 
 **Confirmado ao vivo em homologação (2026-08-10, F2 completa):** a sequência
 "instalar Docker → criar rede externa com subnet fixa → configurar bind-address do MySQL → grant →
