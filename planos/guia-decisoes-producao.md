@@ -49,6 +49,10 @@ e mantém backup/gestão do banco no plano do SO.
 **Custo aceito:** o ambiente não é 100% reproduzível/descartável como o dev. Se um dia quiser paridade
 total, é uma migração própria, separada desta.
 
+**Resultado prático (2026-08-10):** confirmado. Zero dump/restore de dados; o MySQL do host nunca foi
+tocado além de `bind-address` (ADR-08) e um novo usuário/grant. Todas as migrations pré-existentes
+continuaram `Ran` sem re-execução.
+
 ---
 
 ### ADR-02 — nginx do host vira proxy reverso; container publica em `127.0.0.1:8080`
@@ -66,6 +70,11 @@ iptables é ACCEPT, publicar em `0.0.0.0` exporia a aplicação diretamente na r
 
 **Consequência para produção:** repetir. Atenção: `compose.prod.yml` tem default `APP_HTTP_PORT:-80`
 (homolog usa 8080), mas **ambos os workflows sobrescrevem para 80** — corrigir os dois.
+
+**Resultado prático (2026-08-10):** confirmado. Cutover real levou segundos (`nginx -t` + `reload`);
+`cutover-nginx-homolog.sh` restaura o backup automaticamente se `nginx -t` falhar, então nunca houve
+risco de deixar o nginx num estado inválido. Rollback testado disponível em 1 comando
+(`sudo ./cutover-nginx-homolog.sh rollback`), não precisou ser usado.
 
 ---
 
@@ -87,6 +96,10 @@ ficam órfãos.
 **Efeito colateral aceito:** sessões são reiniciadas no corte (usuários deslogam). Aceitável em
 homologação; **em produção, comunicar antes**.
 
+**Resultado prático (2026-08-10):** `scheduler` e `queue` confirmados `Up` e saudáveis em
+`verificar-stack-homolog.sh`. **T5.1 (confirmar que o backup diário de fato rodou) ainda pendente** —
+só é verificável no dia seguinte ao cutover; acompanhar e fechar antes de considerar F5 encerrada.
+
 ---
 
 ### ADR-04 — Cutover paralelo, nunca big-bang
@@ -97,6 +110,15 @@ virar o tráfego.
 etapa a mais; o benefício é que a janela de indisponibilidade real é o tempo de um `systemctl reload nginx`.
 
 **Consequência para produção:** obrigatório. Em produção não existe "tentar e ver".
+
+**Resultado prático (2026-08-10):** validado no essencial — o bare-metal nunca foi parado, e o cutover
+em si (troca do nginx) não teve nenhum risco por rodar em paralelo. **Ressalva importante, não prevista
+no ADR original:** o isolamento entre os dois ambientes **não é total** — eles compartilham o mesmo
+MySQL do host. O incidente de F2 (MySQL em loop de crash por um `bind-address` mal configurado, ver
+ADR-08) afetou o bare-metal também: `/login` deu 500 por ~20 minutos, mesmo com a stack Docker nova
+ainda nem tendo subido. **Lição para produção:** "paralelo" protege a aplicação nova de afetar a antiga,
+mas não protege a antiga de mudanças feitas no host (banco, rede) durante o provisionamento — validar
+esses passos com o mesmo cuidado que se validaria uma mudança em produção de verdade.
 
 ---
 
@@ -120,6 +142,10 @@ problema na skill `run-pmed2` ("não 'conserte' afrouxando a permissão do secre
 
 **Decidir explicitamente antes do cutover de produção. Não herdar por inércia.**
 
+**Resultado prático (2026-08-10):** funcionou sem incidente — `app`/`queue`/`scheduler` leram o secret
+normalmente como root. Nenhum problema de permissão observado. A dívida permanece **não paga**: a
+decisão entre as 3 alternativas listadas acima ainda não foi tomada para produção.
+
 ---
 
 ### ADR-06 — `APP_KEY` é propagado a partir do `shared/.env` do servidor
@@ -133,6 +159,10 @@ torna ilegível qualquer dado encriptado persistido no banco (casts `encrypted`,
 
 **Consequência para produção:** confirmar `grep -c '^APP_KEY=base64:' /var/www/pmed2/shared/.env` = 1
 **antes** de disparar o deploy. Se faltar, **parar** — não gerar chave nova.
+
+**Resultado prático (2026-08-10):** confirmado presente e único em todas as verificações (T2.7, T3.x).
+Sessões e dados encriptados preservados através da migração — nenhuma queixa de logout forçado ou dado
+ilegível após o cutover.
 
 ---
 
@@ -150,6 +180,12 @@ A máscara do GitHub não protegeu porque só redige o valor **completo**.
 **Regra derivada (vale para qualquer secret):** nunca interpolar secret dentro do corpo de um `run:`.
 Sempre passar via bloco `env:` do step e referenciar como `"${VAR}"`. Corrigido em `433c46f0` para
 homolog e produção.
+
+**Resultado prático (2026-08-10):** a regra se provou necessária de novo nesta sessão — todos os novos
+steps escritos (backup, grants, GHCR login) seguiram o padrão `env:` desde o início, e nenhum novo
+vazamento ocorreu apesar de várias senhas/tokens novos terem sido manipulados (senha do banco, GHCR
+token). A regra derivada aqui é a única defesa real contra esse tipo de vazamento — vale reforçar em
+qualquer novo workflow, inclusive fora desta migração.
 
 ---
 
@@ -312,6 +348,11 @@ Sequência: mesma do plano de homologação (F0→F5), trocando `homolog`→`pro
 | P-6 | ~~`planos/` e `docs/` não são versionados~~ — resolvido em 2026-08-10: este guia passou a ser exceção versionada (§7). Os demais arquivos de `planos/` seguem locais por design. | Resolvida |
 | P-7 | Anti-pattern "carrega tabela inteira e filtra 6× no Blade" em `PacotesController::index()` e correlatos; mitigado por seleção de colunas, não resolvido. Causou 500 por memória em produção na v2.1.4. | Média |
 | P-8 | `git filter-repo` para limpar `.env` do histórico Git — marcado CRÍTICO em `planos/plano-retomada.md`, nunca executado. | Alta |
+| P-9 | **Usuário SSH de deploy precisa estar no grupo `docker`** — não é automático quando o Docker é instalado como root via um canal separado (Teleport). Confirmado ao vivo em homolog (`admin21ct` faltando no grupo quebrou a 1ª tentativa de deploy). Incluir como passo explícito do provisionamento de produção, não descobrir na hora. | Alta (evita repetir o incidente) |
+| P-10 | **Pacote GHCR privado exige secrets `*_GHCR_USER`/`*_GHCR_TOKEN`** — nunca existiam para homolog até serem criados nesta sessão (PAT classic, escopo `read:packages`, validade 90 dias). Produção precisa dos seus próprios (`PMED2_PROD_GHCR_USER`/`PMED2_PROD_GHCR_TOKEN`) **antes** do primeiro disparo de `cd-prod.yml`, e o token tem validade — registrar rotação. | Alta |
+| P-11 | ~~Versão exibida na UI (`config/version.php`) hardcoded, desatualizada (3.0.3 vs deploy real 3.0.5)~~ — resolvido em 2026-08-10 (`20952e6c`): passou a ler de `composer.json`. Efeito só aparece no próximo deploy. | Resolvida |
+| P-12 | ADR-05 (`user: "0:0"`) segue como dívida técnica não paga — nenhuma das 3 alternativas foi escolhida para produção. Decidir antes do cutover de produção, não herdar por inércia. | Média |
+| P-13 | Isolamento do cutover paralelo (ADR-04) não cobre mudanças no MySQL do host — o incidente de F2 (loop de crash do MySQL) afetou o bare-metal mesmo com a stack nova ainda não recebendo tráfego, porque os dois ambientes compartilham o mesmo banco. Validar mudanças de host com o mesmo cuidado de uma mudança em produção real. | Média |
 
 ---
 
