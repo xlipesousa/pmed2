@@ -78,26 +78,31 @@ jobs:
           command -v scp
 
       - name: Preparar chave SSH de produção
+        env:
+          SSH_KEY: ${{ secrets.PMED2_PROD_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PMED2_PROD_SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
-          if [ -z "${{ secrets.PMED2_PROD_SSH_KNOWN_HOSTS }}" ]; then
+          if [ -z "${SSH_KNOWN_HOSTS}" ]; then
             echo "Secret PMED2_PROD_SSH_KNOWN_HOSTS não definido. Configure a entrada pinada de known_hosts."
             exit 1
           fi
 
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          cat > ~/.ssh/pmed2_prod <<'EOF'
-          ${{ secrets.PMED2_PROD_SSH_KEY }}
-          EOF
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/pmed2_prod
           chmod 600 ~/.ssh/pmed2_prod
-          printf '%s\n' "${{ secrets.PMED2_PROD_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
+          # Arquivo próprio do job: o ~/.ssh/known_hosts do runner self-hosted é compartilhado
+          # entre execuções e pertence ao usuário do runner — sobrescrevê-lo (e apagá-lo no
+          # cleanup) era efeito colateral indevido sobre outros jobs (mesmo bug corrigido em
+          # cd-homolog.yml, ver planos/guia-decisoes-producao.md B-9).
+          printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/pmed2_prod_known_hosts
+          chmod 644 ~/.ssh/pmed2_prod_known_hosts
 
       - name: Testar SSH (produção)
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pmed2_prod -o BatchMode=yes -o StrictHostKeyChecking=yes "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" "hostname && whoami"
+          ssh -i ~/.ssh/pmed2_prod -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/pmed2_prod_known_hosts "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" "hostname && whoami"
 
       - name: Validar segredo DB (produção)
         env:
@@ -112,12 +117,12 @@ jobs:
       - name: Enviar arquivos de compose para produção
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" '
+          ssh -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/pmed2_prod_known_hosts "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" '
             set -euo pipefail
             mkdir -p /var/www/pmed2/deploy /var/www/pmed2/docker/nginx /var/www/pmed2/shared/compose /var/www/pmed2/shared/secrets
           '
-          scp -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes deploy/compose.prod.yml "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}:/var/www/pmed2/deploy/compose.prod.yml"
-          scp -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes docker/nginx/default.conf "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}:/var/www/pmed2/docker/nginx/default.conf"
+          scp -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/pmed2_prod_known_hosts deploy/compose.prod.yml "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}:/var/www/pmed2/deploy/compose.prod.yml"
+          scp -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/pmed2_prod_known_hosts docker/nginx/default.conf "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}:/var/www/pmed2/docker/nginx/default.conf"
 
       - name: Instalar segredo DB por arquivo (produção)
         env:
@@ -125,21 +130,32 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "${DB_PASSWORD}" | \
-            ssh -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" '
+            ssh -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/pmed2_prod_known_hosts "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" '
               set -euo pipefail
               umask 077
               cat > /var/www/pmed2/shared/secrets/db_password
               chmod 600 /var/www/pmed2/shared/secrets/db_password
+              # ADR-05 paga sem "user: 0:0": o dono do arquivo (usuário SSH de deploy)
+              # concede leitura ao uid 82 (www-data da imagem Alpine) via ACL, sem
+              # precisar de root - diferente de chown, que exige privilégio para
+              # trocar o dono do arquivo (e o usuário de deploy não tem sudo sem
+              # senha em produção). Requer o pacote "acl" instalado no host durante
+              # o provisionamento - setfacl falha alto e cedo se não estiver.
+              setfacl -m u:82:r /var/www/pmed2/shared/secrets/db_password
             '
 
       - name: Deploy docker compose (produção) com rollback automático
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" "TAG='${TARGET_TAG}' GHCR_USER='${{ secrets.PMED2_PROD_GHCR_USER }}' GHCR_TOKEN='${{ secrets.PMED2_PROD_GHCR_TOKEN }}' bash -s" <<'EOSSH'
+          ssh -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/pmed2_prod_known_hosts "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" "TAG='${TARGET_TAG}' GHCR_USER='${{ secrets.PMED2_PROD_GHCR_USER }}' GHCR_TOKEN='${{ secrets.PMED2_PROD_GHCR_TOKEN }}' bash -s" <<'EOSSH'
           set -euo pipefail
 
           APP_BASE="/var/www/pmed2"
           COMPOSE_FILE="$APP_BASE/deploy/compose.prod.yml"
+          # Fixo: sem isso, o nome do projeto (que prefixa volumes/rede) vem do
+          # diretório de trabalho da sessão SSH, que pode variar entre execuções -
+          # trocaria os volumes nomeados a cada deploy em vez de reaproveitá-los.
+          export COMPOSE_PROJECT_NAME="pmed2"
           SHARED_ENV="$APP_BASE/shared/.env"
           COMPOSE_ENV_DIR="$APP_BASE/shared/compose"
           COMPOSE_ENV_FILE="$COMPOSE_ENV_DIR/.env.prod"
@@ -147,6 +163,9 @@ jobs:
           PREVIOUS_TAG_FILE="$COMPOSE_ENV_DIR/previous_tag"
           NEW_TAG="$TAG"
           IMAGE_NAME="ghcr.io/xlipesousa/pmed2"
+          # O nginx do host serve a porta 80 e faz proxy reverso para esta porta.
+          # O compose publica em 127.0.0.1:${APP_HTTP_PORT}, nunca em 0.0.0.0.
+          APP_HTTP_PORT="8080"
 
           mkdir -p "$COMPOSE_ENV_DIR"
 
@@ -191,7 +210,24 @@ jobs:
           trap 'rollback' ERR
 
           APP_URL="$(read_env APP_URL http://localhost)"
-          DB_HOST="$(read_env DB_HOST 127.0.0.1)"
+          # A imagem não contém .env (excluído pelo .dockerignore) e o compose exige APP_KEY:
+          # sem propagar a chave existente do servidor, o Laravel sobe sem chave de criptografia
+          # estável. Tem que ser a MESMA chave — gerar uma nova invalida sessões e torna ilegível
+          # qualquer dado encriptado já persistido no banco (ADR-06).
+          APP_KEY="$(read_env APP_KEY '')"
+          if [ -z "$APP_KEY" ]; then
+            echo "APP_KEY ausente em $SHARED_ENV. Abortando: gerar uma chave nova invalidaria sessões e dados encriptados."
+            # 'exit N' não dispara a trap ERR (só falha de comando comum dispara) - chamar
+            # rollback explicitamente aqui, senão essa saída passa batido sem restaurar nada.
+            rollback
+            exit 1
+          fi
+          # host.docker.internal + extra_hosts no compose: dentro do container, 127.0.0.1 seria o
+          # próprio container, não o MySQL do host.
+          DB_HOST="$(read_env DB_HOST host.docker.internal)"
+          if [ "$DB_HOST" = "127.0.0.1" ] || [ "$DB_HOST" = "localhost" ]; then
+            DB_HOST="host.docker.internal"
+          fi
           DB_PORT="$(read_env DB_PORT 3306)"
           DB_DATABASE="$(read_env DB_DATABASE pmed2)"
           DB_USERNAME="$(read_env DB_USERNAME pmed2)"
@@ -200,23 +236,74 @@ jobs:
             printf 'IMAGE_NAME=%s\n' "$IMAGE_NAME"
             printf 'IMAGE_TAG=%s\n' "$NEW_TAG"
             printf 'APP_URL=%s\n' "$APP_URL"
+            printf 'APP_KEY=%s\n' "$APP_KEY"
             printf 'APP_DEBUG=false\n'
-            printf 'APP_HTTP_PORT=80\n'
+            # 8080 e não 80: o nginx do host ocupa a 80 e faz proxy reverso para cá.
+            printf 'APP_HTTP_PORT=%s\n' "$APP_HTTP_PORT"
             printf 'DB_HOST=%s\n' "$DB_HOST"
             printf 'DB_PORT=%s\n' "$DB_PORT"
             printf 'DB_DATABASE=%s\n' "$DB_DATABASE"
             printf 'DB_USERNAME=%s\n' "$DB_USERNAME"
             printf 'DB_PASSWORD_SECRET_FILE=/var/www/pmed2/shared/secrets/db_password\n'
           } > "$COMPOSE_ENV_FILE"
+          chmod 600 "$COMPOSE_ENV_FILE"
 
           if [ -n "${GHCR_USER:-}" ] && [ -n "${GHCR_TOKEN:-}" ]; then
             printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
           fi
 
-          docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" pull
+          # docker-build.yml e cd-prod.yml podem terminar de publicar a imagem pouco antes
+          # deste disparo manual - sem retry, um pull pontualmente lento derruba o deploy
+          # com um rollback desnecessário (mesmo raciocínio de cd-homolog.yml).
+          pull_ok=false
+          for tentativa in 1 2 3 4 5 6; do
+            if docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" pull; then
+              pull_ok=true
+              break
+            fi
+            echo "pull falhou (tentativa ${tentativa}/6) - aguardando 20s"
+            sleep 20
+          done
+          if [ "$pull_ok" != "true" ]; then
+            echo "Não foi possível baixar ${IMAGE_NAME}:${NEW_TAG} após 6 tentativas."
+            # 'exit N' não dispara a trap ERR - chamar rollback explicitamente.
+            rollback
+            exit 1
+          fi
+
           docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up -d --remove-orphans
 
-          curl -fsS http://127.0.0.1/health >/dev/null
+          # Healthcheck na porta do CONTAINER, não na 80: na 80 quem responde é o nginx bare-metal
+          # do host, o que daria um falso-positivo validando o ambiente antigo (B-6).
+          # Com retry porque app-init precisa copiar o código e o php-fpm precisa subir — sem
+          # espera, o trap ERR dispara rollback mesmo quando o deploy está correto (B-7).
+          health_ok=false
+          for tentativa in $(seq 1 30); do
+            if curl -fsS "http://127.0.0.1:${APP_HTTP_PORT}/health" >/dev/null 2>&1; then
+              health_ok=true
+              echo "Healthcheck OK na tentativa ${tentativa}."
+              break
+            fi
+            sleep 5
+          done
+          if [ "$health_ok" != "true" ]; then
+            echo "Healthcheck falhou após 150s. Logs recentes:"
+            docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" logs --tail=50 app web || true
+            # 'exit N' não dispara a trap ERR - chamar rollback explicitamente.
+            rollback
+            exit 1
+          fi
+
+          # /health devolve JSON estático e não toca no banco - passa mesmo com o DB inacessível.
+          # migrate:status é a prova real de conectividade.
+          if ! docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" exec -T app php artisan migrate:status >/dev/null 2>&1; then
+            echo "Aplicação responde, mas não alcança o banco (migrate:status falhou)."
+            docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" exec -T app php artisan migrate:status || true
+            # 'exit N' não dispara a trap ERR - chamar rollback explicitamente.
+            rollback
+            exit 1
+          fi
+          echo "Conectividade com o banco confirmada via migrate:status."
 
           echo "$NEW_TAG" > "$CURRENT_TAG_FILE"
           echo "Deploy produção concluído com sucesso: $NEW_TAG"
@@ -225,15 +312,43 @@ jobs:
       - name: Healthcheck pós-deploy (produção)
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" '
-            set -euo pipefail
-            curl -fsS http://127.0.0.1/health >/dev/null
-            curl -I http://127.0.0.1/login | head -n 1
-          '
+          # Este step abre uma NOVA conexão SSH, separada da que já validou o
+          # deploy (com seu próprio loop de retry). Uma única tentativa aqui
+          # está sujeita a uma falha pontual de rede/SSH derrubar o job mesmo
+          # com o deploy real já confirmado bem-sucedido - visto ao vivo em
+          # homolog (v3.0.6: deploy passou, este step falhou com curl exit 23
+          # sem nenhuma saída, e a URL pública provou estar saudável segundos
+          # depois). Retry curto para não repetir esse falso-negativo.
+          ok=false
+          for tentativa in 1 2 3 4 5; do
+            if ssh -i ~/.ssh/pmed2_prod -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/pmed2_prod_known_hosts "${{ secrets.PMED2_PROD_SSH_USER }}@${{ secrets.PMED2_PROD_SSH_HOST }}" '
+              set -euo pipefail
+              APP_HTTP_PORT=8080
+              # Sempre a porta do container: na 80 responde o nginx bare-metal do host.
+              curl -fsS "http://127.0.0.1:${APP_HTTP_PORT}/health" >/dev/null
+              # -fsS em vez de "curl -I": "-I" não falha em HTTP 500, então validava um
+              # erro como sucesso (B-6, versão produção). O grep no csrf-token prova que
+              # o Blade renderizou e a sessão funciona.
+              curl -fsS "http://127.0.0.1:${APP_HTTP_PORT}/login" | grep -q "csrf-token"
+              echo "Healthcheck pós-deploy OK (health + login renderizado)."
+            '; then
+              ok=true
+              break
+            fi
+            echo "healthcheck pós-deploy falhou (tentativa ${tentativa}/5) - pode ser blip de rede/SSH; tentando de novo em 10s"
+            sleep 10
+          done
+          if [ "$ok" != "true" ]; then
+            echo "Healthcheck pós-deploy falhou após 5 tentativas."
+            exit 1
+          fi
 
       - name: Limpar material SSH sensível (produção)
         if: always()
         run: |
           set -euo pipefail
+          # Remove apenas o material deste job. O known_hosts do runner é compartilhado entre
+          # execuções e pertence ao usuário do runner - apagá-lo era efeito colateral indevido
+          # (B-9, versão produção).
           rm -f ~/.ssh/pmed2_prod
-          rm -f ~/.ssh/known_hosts
+          rm -f ~/.ssh/pmed2_prod_known_hosts

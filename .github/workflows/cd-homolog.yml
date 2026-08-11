@@ -39,23 +39,24 @@ jobs:
           command -v scp
 
       - name: Preparar chave SSH de homolog
+        env:
+          SSH_KEY: ${{ secrets.PMED2_HOM_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PMED2_HOM_SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
-          if [ -z "${{ secrets.PMED2_HOM_SSH_KNOWN_HOSTS }}" ]; then
+          if [ -z "${SSH_KNOWN_HOSTS}" ]; then
             echo "Secret PMED2_HOM_SSH_KNOWN_HOSTS não definido. Configure a entrada pinada de known_hosts."
             exit 1
           fi
 
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          cat > ~/.ssh/pmed2_homolog <<'EOF'
-          ${{ secrets.PMED2_HOM_SSH_KEY }}
-          EOF
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/pmed2_homolog
           chmod 600 ~/.ssh/pmed2_homolog
           # Arquivo próprio do job: o ~/.ssh/known_hosts do runner self-hosted é compartilhado
           # entre execuções e pertence ao usuário do runner — sobrescrevê-lo (e apagá-lo no
           # cleanup) era efeito colateral indevido sobre outros jobs.
-          printf '%s\n' "${{ secrets.PMED2_HOM_SSH_KNOWN_HOSTS }}" > ~/.ssh/pmed2_homolog_known_hosts
+          printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/pmed2_homolog_known_hosts
           chmod 644 ~/.ssh/pmed2_homolog_known_hosts
 
       - name: Testar SSH (homolog)
