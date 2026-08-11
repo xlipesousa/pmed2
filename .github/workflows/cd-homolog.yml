@@ -264,16 +264,35 @@ jobs:
       - name: Healthcheck pós-deploy (homolog)
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/pmed2_homolog_known_hosts "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" '
-            set -euo pipefail
-            APP_HTTP_PORT=8080
-            # Sempre a porta do container: na 80 responde o nginx bare-metal do host.
-            curl -fsS "http://127.0.0.1:${APP_HTTP_PORT}/health" >/dev/null
-            # -fsS em vez de -I: "curl -I" não falha em HTTP 500, então validava um erro como sucesso.
-            # O grep no csrf-token prova que o Blade renderizou e a sessão funciona.
-            curl -fsS "http://127.0.0.1:${APP_HTTP_PORT}/login" | grep -q "csrf-token"
-            echo "Healthcheck pós-deploy OK (health + login renderizado)."
-          '
+          # Este step abre uma NOVA conexão SSH, separada da que já validou o
+          # deploy (com seu próprio loop de retry). Uma única tentativa aqui
+          # está sujeita a uma falha pontual de rede/SSH derrubar o job mesmo
+          # com o deploy real já confirmado bem-sucedido - visto ao vivo
+          # (v3.0.6: deploy passou, este step falhou com curl exit 23 sem
+          # nenhuma saída, e a URL pública provou estar saudável segundos
+          # depois). Retry curto para não repetir esse falso-negativo.
+          ok=false
+          for tentativa in 1 2 3 4 5; do
+            if ssh -i ~/.ssh/pmed2_homolog -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/pmed2_homolog_known_hosts "${{ secrets.PMED2_HOM_SSH_USER }}@${{ secrets.PMED2_HOM_SSH_HOST }}" '
+              set -euo pipefail
+              APP_HTTP_PORT=8080
+              # Sempre a porta do container: na 80 responde o nginx bare-metal do host.
+              curl -fsS "http://127.0.0.1:${APP_HTTP_PORT}/health" >/dev/null
+              # -fsS em vez de -I: "curl -I" não falha em HTTP 500, então validava um erro como sucesso.
+              # O grep no csrf-token prova que o Blade renderizou e a sessão funciona.
+              curl -fsS "http://127.0.0.1:${APP_HTTP_PORT}/login" | grep -q "csrf-token"
+              echo "Healthcheck pós-deploy OK (health + login renderizado)."
+            '; then
+              ok=true
+              break
+            fi
+            echo "healthcheck pós-deploy falhou (tentativa ${tentativa}/5) - pode ser blip de rede/SSH; tentando de novo em 10s"
+            sleep 10
+          done
+          if [ "$ok" != "true" ]; then
+            echo "Healthcheck pós-deploy falhou após 5 tentativas."
+            exit 1
+          fi
 
       - name: Limpar material SSH sensível (homolog)
         if: always()
