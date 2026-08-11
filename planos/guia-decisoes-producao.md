@@ -353,6 +353,7 @@ Sequência: mesma do plano de homologação (F0→F5), trocando `homolog`→`pro
 | P-11 | ~~Versão exibida na UI (`config/version.php`) hardcoded, desatualizada (3.0.3 vs deploy real 3.0.5)~~ — resolvido em 2026-08-10 (`20952e6c`): passou a ler de `composer.json`. Efeito só aparece no próximo deploy. | Resolvida |
 | P-12 | ADR-05 (`user: "0:0"`) segue como dívida técnica não paga — nenhuma das 3 alternativas foi escolhida para produção. Decidir antes do cutover de produção, não herdar por inércia. | Média |
 | P-13 | Isolamento do cutover paralelo (ADR-04) não cobre mudanças no MySQL do host — o incidente de F2 (loop de crash do MySQL) afetou o bare-metal mesmo com a stack nova ainda não recebendo tráfego, porque os dois ambientes compartilham o mesmo banco. Validar mudanças de host com o mesmo cuidado de uma mudança em produção real. | Média |
+| P-14 | `cd-prod.yml` **não recebeu** nenhuma das correções aplicadas a `cd-homolog.yml` nesta migração (B-6..B-9, retry no healthcheck pós-deploy) — continua com `rm -f ~/.ssh/known_hosts` sem isolar o material do job (o mesmo bug do B-9), healthcheck em `curl -I` na porta 80 (falso-positivo, não prova banco/sessão) e zero retry em qualquer etapa. Não foi tocado de propósito (fora do escopo desta migração, que é só homolog), mas **precisa ser espelhado antes do primeiro disparo real de `cd-prod.yml`** — hoje ele repetiria os mesmos incidentes já resolvidos aqui. | Alta |
 
 ---
 
