@@ -1,12 +1,17 @@
 # Guia de Decisões — Migração para Docker (homologação → produção)
 
-**Propósito:** registrar *por que* cada escolha foi feita na migração de homologação, para que a
-migração de **produção** (`VM-21CT-4RM-PMED2-PROD-SERVER-PROD`) possa ser executada por qualquer
-pessoa ou modelo, sem redescobrir o caminho e sem repetir os erros.
+**Status: as duas migrações estão concluídas.** Homologação (2026-08-10) e produção (2026-08-11)
+rodam a stack Docker em produção real, com `cd-homolog.yml`/`cd-prod.yml` fechando verde de ponta a
+ponta e validação com dados reais (`/pacotes` sem 500 nos dois ambientes).
+
+**Propósito:** registrar *por que* cada escolha foi feita em cada migração — o que se repetiu sem
+incidente (prova de que a lição foi bem capturada) e o que surpreendeu mesmo assim (prova de que
+nenhum ambiente é 100% previsível a partir do outro) — para qualquer pessoa ou modelo que precise
+mexer nesta infraestrutura novamente, sem redescobrir o caminho.
 
 Leia junto com:
-- `planos/plano-migracao-docker-homolog.md` — o plano executável
-- `planos/ESTADO-MIGRACAO-HOMOLOG.md` — o que já foi feito, com evidência
+- `planos/plano-migracao-docker-homolog.md` / `planos/plano-migracao-docker-producao.md` — os planos executáveis
+- `planos/ESTADO-MIGRACAO-HOMOLOG.md` / `planos/ESTADO-MIGRACAO-PROD.md` — o que foi feito, com evidência
 - `docs/plano-execucao-faseado-retomada-docker.md` — histórico anterior (2026-05), com ressalvas na seção 4
 
 ---
@@ -19,10 +24,10 @@ Leia junto com:
 | Modelo em uso | bare-metal: nginx 1.24 + php8.3-fpm + MySQL 8.0.46 no host | idem |
 | Deploy | `releases/<timestamp>` + symlink `current` (`scripts/deploy.sh`) | idem |
 | Versão rodando | 2.1.4 (release de 2026-03-04) | 2.1.4 (release de 2026-03-08) |
-| Backup automático | **Nenhum** — sem cron, sem systemd timer | a verificar |
-| Último backup | 2026-03-04 | a verificar |
-| TLS | não há (HTTP puro) | a verificar |
-| Firewall | `ufw` inativo, iptables ACCEPT | a verificar |
+| Backup automático | **Nenhum** — sem cron, sem systemd timer | **Nenhum** — mesmo padrão (confirmado no diagnóstico de 2026-08-11) |
+| Último backup | 2026-03-04 | 2026-03-08 (5 meses antes da migração) |
+| TLS | não há (HTTP puro) | não há (HTTP puro, sem domínio — `server_name _`, acesso por IP `10.122.8.15`; existe DNS `pmed2.4rm.eb.mil.br` apontando pro mesmo IP, descoberto só depois do cutover) |
+| Firewall | `ufw` inativo, iptables ACCEPT | idem — **mas** existe um firewall corporativo separado (fora do host) que bloqueava egress para `ghcr.io`/Docker Hub por padrão, e só libera as portas 80/443 para o operador via Teleport (ver ADR-10) |
 
 > **Lição registrada:** toda a infraestrutura Docker (Dockerfile, composes, workflows) foi escrita e
 > validada **apenas na VM de desenvolvimento**. A documentação de 2026-05 afirma "6/6 containers UP" e
@@ -142,9 +147,22 @@ problema na skill `run-pmed2` ("não 'conserte' afrouxando a permissão do secre
 
 **Decidir explicitamente antes do cutover de produção. Não herdar por inércia.**
 
-**Resultado prático (2026-08-10):** funcionou sem incidente — `app`/`queue`/`scheduler` leram o secret
-normalmente como root. Nenhum problema de permissão observado. A dívida permanece **não paga**: a
-decisão entre as 3 alternativas listadas acima ainda não foi tomada para produção.
+**Resultado prático (2026-08-10, homolog):** funcionou sem incidente — `app`/`queue`/`scheduler`
+leram o secret normalmente como root. Nenhum problema de permissão observado.
+
+**Dívida paga (2026-08-11):** decisão tomada e implementada em ambos os ambientes — a alternativa 1
+("gravar o secret com permissão restrita ao uid do container"), mas via **ACL, não `chown`**.
+`chown 82:82` foi descartado ao vivo: exige privilégio de root para trocar o **dono** de um arquivo,
+e o usuário SSH de deploy **não tem sudo sem senha em produção** (confirmado por teste direto:
+`sudo -n true` pediu senha) — inviável num step SSH não-interativo do workflow. `setfacl -m u:82:r`
+resolve o mesmo problema sem precisar de root: é uma operação normal do **dono** do arquivo (o
+usuário SSH que já grava o secret), concedendo leitura ao uid 82 (`www-data` da imagem Alpine) sem
+trocar a posse. Só a instalação do pacote `acl` (uma vez, na provisão) precisa de sudo — e essa etapa
+já é interativa por natureza (`apt-get install docker.io` também precisa).
+Implementado em `cd-homolog.yml`/`cd-prod.yml` (step "Instalar segredo DB por arquivo") e validado
+com `getfacl`: `user::rw-`, `user:82:r--`, `mask::r--`. `user: "0:0"` removido de `app`/`queue`/
+`scheduler` nos dois composes — os containers agora rodam como `www-data` (uid 82), não root.
+**ADR-05: Resolvida.**
 
 ---
 
@@ -249,11 +267,104 @@ exatamente a função de pegar isso antes de produção real ser afetada.
 `10.219.20.0/24`. Não presumir `docker0`; usar sempre a subnet declarada no compose como fonte da verdade.
 Em produção, considerar também ativar `ufw`.
 
+**Resultado prático (2026-08-11, produção):** a sequência "rede externa antes do MySQL" funcionou
+**sem nenhum incidente na 1ª tentativa** — diferença marcante frente aos 2 incidentes reais de
+homolog. `docker network create --subnet=10.219.20.0/24 pmed2-prod-net` criou o gateway
+`10.219.20.1` numa interface real (`br-ae3bab27c8c6`); `bind-address = 127.0.0.1,10.219.20.1` ficou
+correto de primeira; o `systemctl restart mysql` não derrubou o bare-metal (`/health` respondeu 200
+logo depois); o gate de conectividade com IP literal (`10.219.20.1`, não `host-gateway`) passou de
+primeira. Confirma que as lições capturadas aqui, quando incorporadas *de antemão* no script (em vez
+de descobertas ao vivo), eliminam o incidente por completo — não é sorte, é o script certo.
+
 **Decisão relacionada:** `COMPOSE_PROJECT_NAME=pmed2` também foi fixado (exportado) em todo lugar que
 invoca `docker compose` (`cd-homolog.yml`, `scripts/verificar-stack-homolog.sh`) — sem isso, o nome do
 projeto (que prefixa volumes e a rede) dependeria do diretório de trabalho da sessão SSH no momento da
 execução, podendo variar entre deploys e fazer o Compose recriar volumes do zero em vez de reaproveitar
 o volume de código já populado pelo `app-init`.
+
+---
+
+### ADR-09 — `memory_limit` explícito na imagem, via `docker/php/pmed2.ini`
+**Contexto:** a imagem base `php:8.3-fpm-alpine` não ativa nenhum `php.ini` (só entrega
+`php.ini-production`/`php.ini-development`, sem copiar nenhum dos dois para `php.ini`). Sem isso, a
+aplicação roda com o default compilado do PHP: `memory_limit=128M`. O php-fpm bare-metal de produção
+tinha sido ajustado em hotfix para `512M` (`pool.d/www.conf`, `php_admin_value[memory_limit]`) depois
+de `/pacotes` (`PacotesController::index()`, mesmo anti-pattern da P-7) causar 500 por estouro de
+memória **em produção**, na v2.1.4.
+
+**Decisão:** criar `docker/php/pmed2.ini` com `memory_limit = 512M` explícito, copiado para
+`/usr/local/etc/php/conf.d/` no estágio `runtime` do `Dockerfile`.
+
+**Razão:** 512M não foi escolhido às cegas — é o mesmo valor já validado ao vivo em produção pelo
+hotfix anterior. Deixar isso implícito (dependendo do default da imagem) reintroduziria exatamente o
+bug que o hotfix já tinha corrigido, só que silenciosamente, na migração para container.
+
+**Resultado prático (2026-08-11):** validado localmente antes do deploy (`docker run --entrypoint
+php-fpm ... -i` confirmou `Server API => FPM/FastCGI`, `Loaded Configuration File => (none)` sem o
+arquivo, `memory_limit => 512M => 512M` com ele). Validado em homolog com login real. Validado em
+**produção com dados reais**: `/pacotes` carregou sem 500 via `http://pmed2.4rm.eb.mil.br/pacotes`
+logo após o cutover — o cenário exato que motivou o hotfix original funcionou de primeira no
+container.
+
+**Pendência derivada:** `memory_limit=512M` é mitigação, não correção — ver P-15 (§6). O
+`PacotesController` continua carregando mais dados do que deveria; o limite mais alto só empurra o
+problema para um volume de dados maior.
+
+---
+
+### ADR-10 — Egress corporativo para GHCR/Docker Hub precisa de liberação explícita, por ambiente
+**Contexto:** o diagnóstico read-only de produção (2026-08-11) mostrou `curl https://ghcr.io/v2/`
+travando em timeout, apesar do DNS resolver (`4.228.31.152`) e do `ufw`/iptables do **host** estarem
+totalmente abertos (`ACCEPT`). Homolog nunca teve esse problema. Conclusão: o bloqueio era num
+firewall **corporativo**, fora do host, não documentado em nenhum diagnóstico anterior — homolog e
+produção não compartilham necessariamente a mesma política de egress, mesmo sendo VMs do mesmo
+template.
+
+**Decisão:** tratar a confirmação de egress como um gate explícito (F0) antes de qualquer
+provisionamento, testado com o método mais forte disponível — não só `curl`, mas `docker pull
+hello-world` depois do Docker instalado, porque uma regra pode liberar o `curl` do host e ainda
+assim falhar para o caminho de rede usado pelo daemon do Docker.
+
+**Resultado prático (2026-08-11):** solicitação de liberação aberta pelo usuário antes da janela;
+confirmada com `401` (não timeout) em `ghcr.io` **e** `registry-1.docker.io` — o pedido cobriu os
+dois registries que a stack usa (`ghcr.io/xlipesousa/pmed2` e as imagens públicas `nginx`/`redis` do
+Docker Hub), mesmo sem ter sido pedido explicitamente para o Docker Hub. Revalidado com sucesso já
+com o Docker instalado (`docker pull hello-world`, seção 2a do script de provisionamento).
+
+**Achado colateral:** o mesmo firewall corporativo só libera as portas **80/443** para o operador via
+Teleport — a porta 8080 (onde a stack sobe em paralelo, antes do cutover) nunca foi acessível para
+teste manual. Isso forçou adiar a validação de `/pacotes` com dados reais para **logo após** o
+cutover, em vez de antes (ver F5/F6 em `planos/ESTADO-MIGRACAO-PROD.md`) — funcionou, mas é uma
+lacuna real no isolamento do cutover paralelo (ADR-04) que vale ter em mente numa próxima migração
+com o mesmo tipo de restrição de rede.
+
+**Consequência para o futuro:** não presumir que a liberação de rede de um ambiente vale para outro.
+Testar cedo, com o método mais forte disponível (`docker pull`, não só `curl`).
+
+---
+
+### ADR-11 — Token do GHCR precisa ser PAT *classic*, não fine-grained
+**Contexto:** no 1º disparo real de `cd-prod.yml` (2026-08-11), o `docker login ghcr.io` teve
+`Login Succeeded`, mas o `docker compose pull` falhou com `403 Forbidden` em todas as 6 tentativas de
+retry: `unexpected status from HEAD request to https://ghcr.io/v2/xlipesousa/pmed2/manifests/v3.0.7:
+403 Forbidden`. Diferente do bloqueio de rede da ADR-10 (que dá timeout), aqui a conexão e a
+autenticação funcionam — só a autorização para ler aquele pacote específico falha.
+
+**Causa:** o PAT gerado para `PMED2_PROD_GHCR_TOKEN` não era um token *classic* com escopo
+`read:packages` (o padrão já estabelecido e funcional em homolog desde `PMED2_HOM_GHCR_TOKEN`).
+Tokens fine-grained têm suporte limitado/inconsistente para leitura de pacotes no GHCR — o login pode
+até validar as credenciais, mas a operação de pull é negada.
+
+**Decisão:** regenerar sempre como **Tokens (classic)**, escopo `read:packages` apenas — nunca
+fine-grained, para qualquer secret `*_GHCR_TOKEN` deste projeto.
+
+**Resultado prático (2026-08-11):** regenerado o token como classic; 2º disparo de `cd-prod.yml`
+fechou 100% verde, incluindo o pull da imagem privada. Nenhum outro ajuste foi necessário.
+
+**Consequência para o futuro:** ao gerar qualquer `*_GHCR_TOKEN` novo (rotação inclusa — os tokens
+têm validade de 90 dias, ver P-10), confirmar explicitamente "Tokens (classic)" na tela do GitHub, não
+"Fine-grained tokens". Um `docker login` bem-sucedido **não** é prova de que o token vai funcionar
+para `pull` — só o `pull` de verdade prova isso (ver §3, nova armadilha).
 
 ---
 
@@ -266,6 +377,7 @@ o volume de código já populado pelo `app-init`.
 | `curl -I .../login` no workflow | `-I` sem `-f` **não falha** em HTTP 500. | `curl -fsS` + `grep -c csrf-token` |
 | Healthcheck logo após `up -d` | Sem retry, dispara o `trap ERR` → **rollback espúrio** mesmo com tudo correto. | Loop com timeout |
 | Tag verde no `docker-build` | `docker-build` e `cd-homolog` disparam **em paralelo** na mesma tag; não há `needs`/`workflow_run`. O `pull` pode rodar antes da imagem existir. | Retry no `pull` |
+| `docker login` com "Login Succeeded" | Só prova que as credenciais são válidas — **não** prova que o token pode fazer `pull` de um pacote específico. Um PAT fine-grained mal configurado loga OK e falha no `pull` com `403 Forbidden` (ADR-11). | Sempre validar com o `docker compose pull` de verdade, não só o `login` |
 
 ---
 
@@ -286,53 +398,50 @@ o volume de código já populado pelo `app-init`.
 
 ---
 
-## 5. Roteiro para produção (derivado, **não** executar sem aprovação)
+## 5. Roteiro de produção — **executado com sucesso em 2026-08-11**
 
-Pré-condições obrigatórias:
-- [ ] Homologação estável em Docker por pelo menos um ciclo completo, **incluindo um backup gerado pelo `scheduler`**
-- [ ] ADR-05 (`user: "0:0"`) decidida explicitamente para produção
-- [ ] Janela de manutenção comunicada (ADR-03: usuários serão deslogados)
-- [ ] Backup do banco de produção **verificado com `gunzip -t`**, guardado fora de `/var/www`
-- [ ] Snapshot da VM de produção
-- [ ] Confirmado `APP_KEY` em `/var/www/pmed2/shared/.env` de produção (ADR-06)
-- [x] Subnet fixa da rede `pmed2` já definida em `compose.prod.yml` (`10.219.20.0/24`, ADR-08) — não depende de descoberta em runtime
-- [ ] **Criar a rede `pmed2-prod-net` explicitamente ANTES de configurar o MySQL** (`docker network create
-  --subnet=10.219.20.0/24 pmed2-prod-net`) — em homolog, pular esse passo e deixar o compose criar a rede
-  implicitamente causou o MySQL entrar em loop de crash (bind num IP que ainda não existia em nenhuma
-  interface). Ver ADR-08 e o Log de ocorrências de `ESTADO-MIGRACAO-HOMOLOG.md` (2026-08-10 18:53–19:13)
-  para o relato completo do incidente.
-- [ ] Confirmar que `extra_hosts` usa o IP fixo do gateway (`host.docker.internal:10.219.20.1`), **nunca**
-  `host.docker.internal:host-gateway` — esse valor mágico resolve para a bridge padrão do Docker, não
-  para a rede `pmed2`, e falha silenciosamente até o teste de conectividade real (confirmado ao vivo em
-  homolog, ver ADR-08)
-- [ ] Secret `PMED2_PROD_SSH_KNOWN_HOSTS` regenerado **a partir do runner** (ver §6)
-- [ ] **Usuário SSH de deploy de produção (secret `PMED2_PROD_SSH_USER`) adicionado ao grupo `docker`**
-  (`sudo usermod -aG docker <usuário>`) — em homolog, o Docker foi instalado como root via Teleport, mas
-  isso não adiciona automaticamente nenhum outro usuário ao grupo `docker`. Sem isso, o primeiro deploy
-  falha com `permission denied ... docker.sock`, mesmo com tudo mais correto.
-- [ ] **Secrets `PMED2_PROD_GHCR_USER`/`PMED2_PROD_GHCR_TOKEN` criados antes do primeiro disparo de
-  `cd-prod.yml`** — o pacote GHCR é privado; sem esses secrets o `docker login` do workflow fica
-  condicional e pula silenciosamente, e o `pull` falha com `unauthorized`. Gerar um PAT classic com
-  escopo `read:packages` (registrar validade para rotação futura — 90 dias em homolog).
+Migração de produção para Docker está **funcionalmente completa**: `cd-prod.yml` fecha verde,
+6 containers de pé, `/pacotes` com dados reais confirmado sem 500 na URL pública
+(`http://pmed2.4rm.eb.mil.br`). Checklist original, com o resultado real de cada item:
 
-**Confirmado ao vivo em homologação (2026-08-10, F3 completa):** `cd-homolog.yml` fechou **100% verde
-de ponta a ponta** pela primeira vez na história do projeto, na 3ª tentativa (as duas primeiras
-falharam exatamente nos dois pontos acima — grupo `docker` e secrets GHCR — e foram corrigidas em
-minutos, sem precisar alterar nenhum código ou workflow). Essas duas pré-condições evitam repetir
-esse mesmo ciclo de tentativa-e-erro em produção.
+- [x] Homologação estável em Docker por um ciclo completo antes de iniciar (v3.0.5→v3.0.7, múltiplos
+  deploys verdes)
+- [x] ADR-05 decidida explicitamente para produção — **ACL (`setfacl`), não `chown`** (ver ADR-05)
+- [x] Janela de manutenção comunicada (T3.8) — provisionamento e cutover feitos na mesma janela
+- [x] Backup do banco de produção verificado com `gunzip -t` — dois backups, um manual (1.4M) e um
+  automático do próprio script de provisionamento (1.4M), guardados fora de `/var/www`
+- [x] Snapshot da VM de produção — "VM Snapshot 11/02/2026, 17:00:50"
+- [x] Confirmado `APP_KEY` único em `/var/www/pmed2/shared/.env` de produção (ADR-06)
+- [x] Subnet fixa da rede `pmed2` (`10.219.20.0/24`, ADR-08) — criada com sucesso, zero incidentes
+- [x] Rede `pmed2-prod-net` criada explicitamente ANTES do MySQL — confirmado, sem crash-loop
+- [x] `extra_hosts` com IP fixo do gateway (`10.219.20.1`), nunca `host-gateway` — confirmado
+- [x] Secret `PMED2_PROD_SSH_KNOWN_HOSTS` já existia desde 2026-02-27/08-08, funcionou de primeira
+- [x] Usuário SSH de deploy (`admin21ct`) adicionado ao grupo `docker` — incorporado *no próprio
+  script* de provisionamento (P4.2), não descoberto ao vivo como aconteceu em homolog
+- [x] Secrets `PMED2_PROD_GHCR_USER`/`PMED2_PROD_GHCR_TOKEN` criados antes do disparo — **mas o 1º
+  token gerado era do tipo errado** (fine-grained em vez de classic), causou `403 Forbidden` no
+  1º disparo real; corrigido regenerando como classic (ver ADR-11)
+- [x] **Item novo, não previsto no checklist original:** egress corporativo para `ghcr.io` +
+  Docker Hub precisou de liberação de firewall explícita (ADR-10) — bloqueava com timeout antes da
+  liberação, algo que homolog nunca teve
 
-**Confirmado ao vivo em homologação (2026-08-10, F2 completa):** a sequência
-"instalar Docker → criar rede externa com subnet fixa → configurar bind-address do MySQL → grant →
-gate de conectividade com IP fixo (não `host-gateway`) → confirmar APP_KEY" rodou do início ao fim sem
-erros na segunda tentativa (depois de 2 incidentes corrigidos — ver ADR-08). O script
-`scripts/provisionar-docker-homolog.sh` é o roteiro de referência a adaptar para produção (trocar
-subnet/nomes de `homolog` para `prod`).
+**Diferença notável frente a homolog:** o provisionamento (F4, o script de infraestrutura) fechou
+**100% verde na 1ª tentativa** — zero incidentes de rede/MySQL, porque as 3 lições de homolog (grupo
+docker, revalidação de egress, e a própria sequência rede-antes-do-MySQL da ADR-08) foram
+incorporadas *no script*, não descobertas ao vivo de novo. Os dois problemas reais desta migração
+(GHCR 403, e a decisão pendente da ADR-05) eram coisas que homolog **não tinha** para ensinar —
+apareceram só em produção, e agora estão documentados aqui para a próxima vez.
 
-Sequência: mesma do plano de homologação (F0→F5), trocando `homolog`→`prod`, com duas diferenças:
-1. `cd-prod.yml` é `workflow_dispatch` com environment `production` protegido — o disparo é manual e
-   passa por aprovação. Não há deploy automático por tag.
-2. `cd-prod.yml` tem `mode: rollback` + `rollback_tag`, que homolog não tem — testar o rollback
-   **antes** de precisar dele.
+Diferenças de execução em relação ao homolog (F0→F6, `homolog`→`prod`):
+1. `cd-prod.yml` é `workflow_dispatch` com environment `production` protegido por required reviewer
+   (`xlipesousa`) — cada disparo pausou de fato até aprovação manual pelo GitHub, confirmado ao vivo
+   nos dois disparos desta migração.
+2. `cd-prod.yml` tem `mode: rollback` + `rollback_tag`, que homolog não tem — **ainda não testado**
+   (não foi necessário; primeiro deploy não teve `previous_tag`). Testar antes do próximo deploy real.
+3. O firewall corporativo do operador só libera 80/443 via Teleport — a validação de `/pacotes` com
+   dados reais (P5.6) precisou ser adiada para logo **depois** do cutover, não antes (diferente de
+   homolog, que testou pela 8080 antes de virar o tráfego). Funcionou, mas é uma lacuna real no
+   isolamento do cutover paralelo (ver ADR-04/ADR-10) a considerar numa próxima migração.
 
 ---
 
@@ -342,18 +451,20 @@ Sequência: mesma do plano de homologação (F0→F5), trocando `homolog`→`pro
 |---|---|---|
 | P-1 | **Homolog e produção têm as mesmas chaves de host SSH** (mesmo `ssh-rsa`, `ecdsa`, `ed25519`) — indício de VMs clonadas de um template com as chaves já geradas, em vez de cada uma gerar as suas no primeiro boot. Enfraquece o pinning de `known_hosts`. | Alta |
 | P-2 | O valor de `PMED2_HOM_SSH_HOST` **não é** o nome de exibição do Teleport. `known_hosts` hasheado é calculado sobre a string exata da conexão — por isso escanear pelo Teleport gerou hashes que nunca casavam. Regenerar **sempre a partir do runner**. | Média (resolvida, mas repetível) |
-| P-3 | Sem TLS em homologação (HTTP puro), sem certbot instalado. | Média |
-| P-4 | `ufw` inativo e iptables ACCEPT em homologação. | Média |
+| P-3 | Sem TLS em homologação **nem produção** (HTTP puro), sem certbot instalado em nenhum dos dois. Produção é acessada por IP (`10.122.8.15`) e por um DNS interno (`pmed2.4rm.eb.mil.br`) sem certificado. | Média |
+| P-4 | `ufw` inativo e iptables ACCEPT em homologação **e produção** (nível de host). Produção tem, adicionalmente, um firewall corporativo separado controlando egress/acesso do operador — ver ADR-10. | Média |
 | P-5 | `docker-compose.yml` × `docker-compose.retomada.yml` sem canônico definido (ver §4). | Baixa |
 | P-6 | ~~`planos/` e `docs/` não são versionados~~ — resolvido em 2026-08-10: este guia passou a ser exceção versionada (§7). Os demais arquivos de `planos/` seguem locais por design. | Resolvida |
-| P-7 | Anti-pattern "carrega tabela inteira e filtra 6× no Blade" em `PacotesController::index()` e correlatos; mitigado por seleção de colunas, não resolvido. Causou 500 por memória em produção na v2.1.4. | Média |
+| P-7 | Anti-pattern "carrega tabela inteira e filtra 6× no Blade" em `PacotesController::index()` e correlatos; mitigado por seleção de colunas, não resolvido. Causou 500 por memória em produção na v2.1.4. **Mitigado de novo em 2026-08-11 via `memory_limit=512M` na imagem (ADR-09) — segue sem correção real, ver P-15.** | Média |
 | P-8 | `git filter-repo` para limpar `.env` do histórico Git — marcado CRÍTICO em `planos/plano-retomada.md`, nunca executado. | Alta |
-| P-9 | **Usuário SSH de deploy precisa estar no grupo `docker`** — não é automático quando o Docker é instalado como root via um canal separado (Teleport). Confirmado ao vivo em homolog (`admin21ct` faltando no grupo quebrou a 1ª tentativa de deploy). Incluir como passo explícito do provisionamento de produção, não descobrir na hora. | Alta (evita repetir o incidente) |
-| P-10 | **Pacote GHCR privado exige secrets `*_GHCR_USER`/`*_GHCR_TOKEN`** — nunca existiam para homolog até serem criados nesta sessão (PAT classic, escopo `read:packages`, validade 90 dias). Produção precisa dos seus próprios (`PMED2_PROD_GHCR_USER`/`PMED2_PROD_GHCR_TOKEN`) **antes** do primeiro disparo de `cd-prod.yml`, e o token tem validade — registrar rotação. | Alta |
+| P-9 | ~~Usuário SSH de deploy precisa estar no grupo `docker`~~ — resolvido em 2026-08-11: incorporado como passo explícito (`usermod -aG docker`) em `scripts/provisionar-docker-prod.sh`, seção 1a. Rodou sem incidente na 1ª tentativa em produção. | Resolvida |
+| P-10 | **Pacote GHCR privado exige secrets `*_GHCR_USER`/`*_GHCR_TOKEN`, sempre PAT classic (não fine-grained)** — resolvido em 2026-08-11 para produção (`PMED2_PROD_GHCR_USER`/`PMED2_PROD_GHCR_TOKEN`), depois de um 1º token gerado como fine-grained causar `403 Forbidden` no pull (ADR-11). **Ambos os tokens (homolog e produção) têm validade de 90 dias — registrar rotação para novembro/2026.** | Resolvida (rotação pendente) |
 | P-11 | ~~Versão exibida na UI (`config/version.php`) hardcoded, desatualizada (3.0.3 vs deploy real 3.0.5)~~ — resolvido em 2026-08-10 (`20952e6c`): passou a ler de `composer.json`. Efeito só aparece no próximo deploy. | Resolvida |
-| P-12 | ADR-05 (`user: "0:0"`) segue como dívida técnica não paga — nenhuma das 3 alternativas foi escolhida para produção. Decidir antes do cutover de produção, não herdar por inércia. | Média |
-| P-13 | Isolamento do cutover paralelo (ADR-04) não cobre mudanças no MySQL do host — o incidente de F2 (loop de crash do MySQL) afetou o bare-metal mesmo com a stack nova ainda não recebendo tráfego, porque os dois ambientes compartilham o mesmo banco. Validar mudanças de host com o mesmo cuidado de uma mudança em produção real. | Média |
-| P-14 | `cd-prod.yml` **não recebeu** nenhuma das correções aplicadas a `cd-homolog.yml` nesta migração (B-6..B-9, retry no healthcheck pós-deploy) — continua com `rm -f ~/.ssh/known_hosts` sem isolar o material do job (o mesmo bug do B-9), healthcheck em `curl -I` na porta 80 (falso-positivo, não prova banco/sessão) e zero retry em qualquer etapa. Não foi tocado de propósito (fora do escopo desta migração, que é só homolog), mas **precisa ser espelhado antes do primeiro disparo real de `cd-prod.yml`** — hoje ele repetiria os mesmos incidentes já resolvidos aqui. | Alta |
+| P-12 | ~~ADR-05 (`user: "0:0"`) segue como dívida técnica não paga~~ — resolvido em 2026-08-11: decisão tomada e implementada nos dois ambientes via ACL (`setfacl`), não `chown` (ver ADR-05). Containers rodam como `www-data` (uid 82), não root. | Resolvida |
+| P-13 | Isolamento do cutover paralelo (ADR-04) não cobre mudanças no MySQL do host — o incidente de F2 (loop de crash do MySQL) afetou o bare-metal mesmo com a stack nova ainda não recebendo tráfego, porque os dois ambientes compartilham o mesmo banco. **Em produção o mesmo passo rodou sem incidente** (script já incorporava a lição), mas o risco estrutural (banco compartilhado) permanece — vale o mesmo cuidado numa próxima mudança de host. | Média |
+| P-14 | ~~`cd-prod.yml` não recebeu nenhuma das correções aplicadas a `cd-homolog.yml`~~ — resolvido em 2026-08-11 (`027e2fc5`): todas as 11 correções espelhadas (porta 8080, `APP_KEY`, `DB_HOST`, retry de pull/healthcheck, gate `migrate:status`, `rollback` explícito, `known_hosts` isolado, healthcheck pós-deploy com retry, secret via `setfacl`). Validado ao vivo: `cd-prod.yml` fechou 100% verde. | Resolvida |
+| P-15 | **`memory_limit=512M` (ADR-09) é mitigação, não correção.** A causa real — `PacotesController::index()` carregando mais dados do que o necessário e filtrando no Blade — segue sem correção. Revisitar em uma versão futura: paginação real no banco, seleção de colunas, ou mover o filtro para SQL. | Média |
+| P-16 | `cd-prod.yml` tem `mode: rollback`/`rollback_tag`, que `cd-homolog.yml` não tem, e **nunca foi exercitado de verdade** (o 1º deploy de produção não tinha `previous_tag` para testar contra). Testar explicitamente antes do próximo deploy real de produção — não descobrir se funciona só quando for preciso de fato. | Alta |
 
 ---
 
