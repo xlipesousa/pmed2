@@ -94,6 +94,12 @@ jobs:
               umask 077
               cat > /var/www/pmed2/shared/secrets/db_password
               chmod 600 /var/www/pmed2/shared/secrets/db_password
+              # ADR-05 paga sem "user: 0:0": o dono do arquivo (usuário SSH de deploy)
+              # concede leitura ao uid 82 (www-data da imagem Alpine) via ACL, sem
+              # precisar de root - diferente de chown, que exige privilégio para
+              # trocar o dono do arquivo. Requer o pacote "acl" já instalado no host
+              # (ver provisionamento) - setfacl falha alto e cedo se não estiver.
+              setfacl -m u:82:r /var/www/pmed2/shared/secrets/db_password
             '
 
       - name: Deploy docker compose (homolog) com rollback automático

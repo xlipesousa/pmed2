@@ -13,7 +13,6 @@ services:
     image: ${IMAGE_NAME:-ghcr.io/xlipesousa/pmed2}:${IMAGE_TAG:?IMAGE_TAG obrigatório}
     container_name: pmed2-app-prod
     restart: unless-stopped
-    user: "0:0"
     environment:
       APP_KEY: ${APP_KEY:?APP_KEY obrigatório}
       APP_ENV: production
@@ -74,7 +73,6 @@ services:
     image: ${IMAGE_NAME:-ghcr.io/xlipesousa/pmed2}:${IMAGE_TAG:?IMAGE_TAG obrigatório}
     container_name: pmed2-queue-prod
     restart: unless-stopped
-    user: "0:0"
     command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=90"]
     environment:
       APP_KEY: ${APP_KEY:?APP_KEY obrigatório}
@@ -116,7 +114,6 @@ services:
     image: ${IMAGE_NAME:-ghcr.io/xlipesousa/pmed2}:${IMAGE_TAG:?IMAGE_TAG obrigatório}
     container_name: pmed2-scheduler-prod
     restart: unless-stopped
-    user: "0:0"
     command: ["php", "artisan", "schedule:work"]
     environment:
       APP_KEY: ${APP_KEY:?APP_KEY obrigatório}

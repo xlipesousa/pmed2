@@ -74,6 +74,9 @@ WORKDIR /var/www/html
 
 COPY --from=build --chown=www-data:www-data /var/www/html /var/www/html
 COPY --chown=www-data:www-data docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+# A imagem base não ativa nenhum php.ini, então sem isto valem os defaults
+# compilados do PHP (memory_limit=128M) - ver o comentário no próprio arquivo.
+COPY docker/php/pmed2.ini /usr/local/etc/php/conf.d/pmed2.ini
 
 RUN chmod +x /usr/local/bin/entrypoint.sh \
  && mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
