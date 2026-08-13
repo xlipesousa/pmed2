@@ -1784,5 +1784,32 @@
                 });
             });
         });
+
+        // Ancorar a sugestão de "Prazo para Retirada do Ofício" à Data da
+        // Notificação (docs/40-decisoes/P-23.md). Antes, a sugestão era sempre
+        // hoje + 30 dias, mesmo quando a notificação era registrada com data
+        // retroativa. Continua sendo aviso, não ação (docs/40-decisoes/ADR-12.md):
+        // o campo permanece editável, e uma edição manual do usuário não é
+        // sobrescrita.
+        $(function() {
+            $('#modalNotificarGlosa').on('shown.bs.modal', function() {
+                $('#data_limite_retirada').data('editadoManualmente', false);
+            });
+
+            $('#data_limite_retirada').on('input', function() {
+                $(this).data('editadoManualmente', true);
+            });
+
+            $('#data_notificacao_div').on('change.datetimepicker', function(e) {
+                if (!e.date || $('#data_limite_retirada').data('editadoManualmente')) {
+                    return;
+                }
+                var sugestao = e.date.clone().add(30, 'days');
+                if (sugestao.isBefore(moment(), 'day')) {
+                    sugestao = moment(); // nunca sugere prazo já vencido
+                }
+                $('#data_limite_div').datetimepicker('date', sugestao);
+            });
+        });
     </script>
 @stop

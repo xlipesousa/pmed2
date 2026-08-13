@@ -86,17 +86,21 @@ ofício.
 | `data_retirada_oficio` | Quando efetivamente retirou |
 | `data_recebimento_recurso` | Quando apresentou recurso |
 
-> [!warning] O prazo é digitado à mão, não calculado
-> `data_limite_retirada` vem do formulário (`$request->data_limite_retirada`,
-> `PacotesController.php:1026`) — o sistema **não** soma 30 dias à data de notificação nem
-> valida a diferença. O operador digita a data limite.
+> [!info] O prazo tem sugestão automática — corrigido em 2026-08-12
+> Uma verificação anterior deste cofre afirmava que `data_limite_retirada` era "digitada à
+> mão, sem cálculo". **Estava errada.** O formulário de notificação
+> (`resources/views/pacotes/ver.blade.php`, modal `#modalNotificarGlosa`) já pré-preenche o
+> campo com `hoje + 30 dias` (`moment().add(30, 'days')`), editável antes de enviar.
 >
-> Isso não é descuido de implementação: a própria especificação original registrou o item
-> como não resolvido ("pensar em uma forma de controlar e informar/controlar esse prazo no
-> sistema"). Ficou como está desde então.
+> **O que falta de verdade:** a sugestão é ancorada em **"hoje"** (o momento em que a tela é
+> aberta), não na **data de notificação** que o operador está preenchendo no mesmo
+> formulário. Como `data_notificacao_glosa` aceita datas passadas (`maxDate: hoje`, sem
+> `minDate`), registrar uma notificação retroativa produz uma sugestão de prazo **contada do
+> dia errado**. Rastreado em [[P-23]].
 >
-> Consequência: um prazo digitado errado não é detectado, e não há alerta automático de
-> vencimento — só a consulta manual da tela de prazos.
+> O aviso automático de vencimento (relatório/contador) é outra lacuna, também coberta por
+> [[P-23]] — essa sim não existia, e foi fechada em
+> `specs/003-relatorio-prazo-glosa/`.
 
 Dois predicados no model calculam a situação do prazo:
 

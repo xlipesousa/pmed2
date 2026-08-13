@@ -112,17 +112,27 @@ O relatório só ajuda quem lembra de abri-lo. Para fechar `docs/40-decisoes/P-2
 
 **Critério de aceite:** o número aparece no dashboard sem que ninguém precise procurar.
 
-### F4 — Sugerir a data limite na notificação *(melhoria correlata)*
+### F4 — Ancorar a sugestão de prazo à data de notificação *(escopo corrigido durante a execução)*
 
-Hoje `data_limite_retirada` é **digitada em branco** pelo operador
-(`docs/10-dominio/Glosa, recurso e prazos.md`) — o sistema não sugere nada, e um erro de
-digitação não é detectado.
+> [!NOTA] Achado durante a implementação
+> O plano original desta fase estava errado: `data_limite_retirada` **já** vem sugerida
+> (`hoje + 30 dias`, editável) no formulário de notificação de glosa
+> (`resources/views/pacotes/ver.blade.php`, modal `#modalNotificarGlosa`). Não faltava a
+> sugestão — faltava ela estar ancorada na data certa. Corrigido em
+> `docs/40-decisoes/P-23.md`.
 
-Passar a sugerir `data_notificacao + 30 dias` (editável) é **aviso, não ação** — compatível
-com a ADR-12 — e reduz erro na origem.
+O problema real: a sugestão é calculada a partir de **"hoje"**
+(`moment().add(30, 'days')`, fixado quando a tela abre), não a partir da **data de
+notificação** que o operador está preenchendo no mesmo formulário. Como essa data aceita
+valores retroativos (`maxDate: hoje`, sem `minDate`), notificar com atraso produz uma
+sugestão de prazo contada do dia errado.
 
-**Critério de aceite:** ao informar a data de notificação, a data limite é pré-preenchida e
-continua editável.
+**Ação:** recalcular a sugestão de `data_limite_retirada` quando o campo `data_notificacao`
+mudar, em vez de fixá-la no carregamento da tela. Segue sendo aviso, não ação — compatível
+com a ADR-12.
+
+**Critério de aceite:** alterar a data de notificação para uma data passada atualiza a
+sugestão de prazo para `data_notificacao + 30 dias`; o campo continua editável depois.
 
 ## Riscos
 

@@ -133,6 +133,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/glosas', [App\Http\Controllers\RelatorioController::class, 'glosas'])->name('relatorios.glosas');
         Route::get('/financeiro', [App\Http\Controllers\RelatorioController::class, 'financeiro'])->name('relatorios.financeiro');
         Route::get('/ocspsa', [App\Http\Controllers\RelatorioController::class, 'ocspsa'])->name('relatorios.ocspsa');
+        Route::get('/prazo-recurso', [App\Http\Controllers\RelatorioController::class, 'prazoRecurso'])->name('relatorios.prazo-recurso');
     });
     
     Route::get('/pesquisa', [App\Http\Controllers\PesquisaController::class, 'index'])->name('pesquisa.index');

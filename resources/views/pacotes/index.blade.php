@@ -308,7 +308,15 @@
                         <tbody>
                             @foreach($pacotes as $pacote)
                                 @if($pacote->localizacao_atual == 'glosa')
-                                    <tr class="{{ $pacote->estado_glosa == 'Aguardando Recurso de Glosa' ? 'aguardando-recurso' : '' }}">
+                                    @php
+                                        // Aviso visual (não ação — docs/40-decisoes/ADR-12.md). Fecha parte de P-23.
+                                        // !$pacote->anulado: mesma exclusão do scope prazoRecursoVencido() (Pacote::validos()).
+                                        $prazoVencido = !$pacote->anulado
+                                            && $pacote->estado_glosa == 'Aguardando Recurso de Glosa'
+                                            && $pacote->data_retirada_oficio
+                                            && $pacote->diasDesdeRetiradaOficio() > config('pmed2.prazo_recurso_dias');
+                                    @endphp
+                                    <tr class="{{ $prazoVencido ? 'prazo-vencido' : ($pacote->estado_glosa == 'Aguardando Recurso de Glosa' ? 'aguardando-recurso' : '') }}">
                                         <td>
                                             <input type="checkbox" class="check-item-glosa" value="{{ $pacote->id }}">
                                         </td>
@@ -649,6 +657,11 @@
         /* Nova classe para destacar pacotes aguardando recurso de glosa */
         .aguardando-recurso {
             background-color: #d1ecf1 !important; /* Azul claro */
+        }
+
+        /* Prazo de recurso vencido (docs/40-decisoes/ADR-12.md — só destaque, sem ação automática) */
+        .prazo-vencido {
+            background-color: #f8d7da !important; /* Vermelho claro */
         }
     </style>
 @stop

@@ -41,6 +41,7 @@ class PacotesController extends Controller
                 'id', 'ocs_psa_id', 'tipo_id', 'numero_fatura', 'data_entrada',
                 'valor_fatura', 'valor_glosa', 'valor_pos_lisura', 'valor_pendente',
                 'estado_geral', 'estado_glosa', 'localizacao_atual', 'localizacao_fisica',
+                'data_retirada_oficio', 'anulado', // usadas pelo destaque de prazo vencido na aba Glosa (docs/40-decisoes/P-23.md)
             ])
                         ->with([
                             'ocsPsa:id,nome',

@@ -41,17 +41,16 @@ executada pela equipe Glosa.
 
 ## Consequências
 
-- `data_limite_retirada` permanece de entrada manual. Não somar 30 dias automaticamente
-  seria inconsistente com esta decisão? Não: **calcular a data sugerida é aceitável**;
-  o que a decisão proíbe é *agir* sobre ela.
+- `data_limite_retirada` **já vem sugerida** (`hoje + 30 dias`, editável) no formulário de
+  notificação — calcular a sugestão é aviso, não ação, e é compatível com esta decisão.
+  A imprecisão restante (a sugestão ancora em "hoje", não na data de notificação
+  informada, que pode ser retroativa) é rastreada em [[P-23]].
 - A tela de prazos (`pacotes.prazos`) e os predicados `prazoRetiradaExcedido()` /
-  `diasRetiradaRestantes()` são o mecanismo de aviso.
+  `diasRetiradaRestantes()` completavam parcialmente o aviso — mas exigiam que alguém
+  lembrasse de abrir a tela.
 
-> [!bug] O aviso previsto por esta decisão não existe de fato
-> A decisão é "avisa mas não age". Hoje o sistema **não avisa** — não há notificação, alerta
-> no dashboard nem destaque de pacote vencido; só a consulta manual da tela de prazos, que
-> exige que alguém lembre de olhar.
->
-> Ou seja: a metade "não age" está implementada, a metade "avisa" não. Rastreado em [[P-23]].
+**Resolvido em 2026-08-12** (`specs/003-relatorio-prazo-glosa/`): relatório dedicado a
+pacotes com recurso vencido, com contador visível no dashboard e destaque na listagem —
+fechando a metade "avisa" que faltava, sem violar esta decisão em nenhum ponto.
 
 Ver [[Glosa, recurso e prazos]] e [[Estados do pacote]].

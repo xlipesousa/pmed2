@@ -84,6 +84,15 @@ Isso causou erro 500 em produção na v2.1.4. A mitigação aplicada foi elevar 
 para 512M ([[ADR-09]]) — **mitigação, não correção**. A correção é uma query paginada por aba
 mais uma query agregada para os contadores.
 
+> [!warning] O `select()` explícito é uma armadilha de manutenção, não só de memória
+> Uma segunda mitigação já existe: `index()` seleciona só as colunas que a view lia **na
+> época em que foi escrita**. Ao adicionar qualquer código na view que leia um campo novo do
+> pacote (como o destaque de prazo vencido de `specs/003-relatorio-prazo-glosa/`, que
+> precisou de `data_retirada_oficio` e `anulado`), **o campo chega `null` silenciosamente**
+> se não for acrescentado ao `select()` — sem erro, sem aviso, só o comportamento errado.
+> Confirmado ao vivo durante a spec 003. Checar o whitelist é passo obrigatório sempre que
+> `pacotes/index.blade.php` passar a usar uma coluna nova.
+
 ## 5. Código morto
 
 | Item | Tamanho |

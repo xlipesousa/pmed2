@@ -52,6 +52,13 @@
                             <div class="btn-description text-white">Prestadores e organizações</div>
                         </a>
                     </div>
+                    <div class="col-md-3 col-sm-6">
+                        <a href="{{ route('relatorios.prazo-recurso') }}" class="btn btn-app bg-danger">
+                            <i class="far fa-clock"></i>
+                            <div class="btn-title">Prazo de Recurso</div>
+                            <div class="btn-description text-white">Pacotes aguardando recurso vencido</div>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

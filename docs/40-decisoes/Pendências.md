@@ -34,6 +34,7 @@ Fonte original: `planos/guia-decisoes-producao.md` §6.
 | [[P-22\|P-22]] | Sem índice único em `(numero_fatura, ocs_psa_id)` | Média |
 | [[P-23\|P-23]] | O aviso de prazo vencido nunca foi implementado | Média |
 | [[P-24\|P-24]] | A entidade "guia" não existe no modelo | Média |
+| [[P-25\|P-25]] | Carbon 3 `diffInDays()` retorna float, sem truncar | Baixa |
 
 > [!danger] P-21 é a de maior urgência do inventário
 > É a única cujo dano está acontecendo **agora**, em produção, e cresce com o tempo. Ver

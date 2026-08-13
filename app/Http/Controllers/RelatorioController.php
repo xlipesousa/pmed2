@@ -489,4 +489,30 @@ class RelatorioController extends Controller
         // Retorne a view com os dados
         return view('relatorios.ocspsa', compact('topOcsPsaValor', 'topOcsPsaVolume', 'topOcsPsaGlosa', 'topOcsPsaRecuperacao'));
     }
+
+    /**
+     * Relatório de pacotes com prazo de recurso de glosa vencido —
+     * mais de N dias desde a retirada do Ofício de Glosa, ainda
+     * aguardando recurso.
+     *
+     * Este relatório é aviso, não ação (docs/40-decisoes/ADR-12.md): ele
+     * não move nenhum pacote sozinho. A movimentação para Arquivo/SIRE é
+     * feita pelo operador, via "Registrar recurso não recebido"
+     * (specs/003-relatorio-prazo-glosa).
+     */
+    public function prazoRecurso(Request $request)
+    {
+        $dias = (int) $request->input('dias', config('pmed2.prazo_recurso_dias'));
+        if ($dias < 1) {
+            $dias = config('pmed2.prazo_recurso_dias');
+        }
+
+        $pacotes = Pacote::validos()
+            ->prazoRecursoVencido($dias)
+            ->with('ocsPsa')
+            ->orderBy('data_retirada_oficio')
+            ->get();
+
+        return view('relatorios.prazo-recurso', compact('pacotes', 'dias'));
+    }
 }

@@ -44,7 +44,15 @@ fase da spec.
 |---|---|---|---|
 | 001 | [Caça ao bug do protocolo](001-caca-bug-protocolo/spec.md) | 🔴 não iniciada | **Prioridade máxima** — afeta produção agora |
 | 002 | [Rastreamento de guias](002-rastreamento-guias/spec.md) | 🔴 não iniciada | Pedido do cliente. Depende da 001 e da rede de testes |
-| 003 | [Relatório de prazo de recurso](003-relatorio-prazo-glosa/spec.md) | 🔴 não iniciada | Pedido do cliente. **Independente** — pode começar já |
+| 003 | [Relatório de prazo de recurso](003-relatorio-prazo-glosa/spec.md) | 🟡 F1-F3 verificadas end-to-end, F4 implementada sem verificação interativa | Pedido do cliente. Primeira spec executada pela convenção |
+
+**003 executada em 2026-08-13.** Verificação real contra a stack Docker local (HTTP
+autenticado, dados de teste, rebuild de imagem a cada mudança) — não apenas leitura de
+código. Revelou 3 bugs reais no próprio trabalho antes de qualquer usuário encontrá-los:
+Carbon 3 retornando float em `diffInDays()` ([[P-25]] no cofre), e duas colunas ausentes no
+`select()` explícito de `PacotesController::index()` que faziam o destaque visual falhar em
+silêncio. Ver `specs/003-relatorio-prazo-glosa/estado.md` para o detalhe completo — inclusive
+o que ainda falta (verificação interativa do JS de F4 num navegador real).
 
 **Ordem sugerida: 003 → 001 → 002.**
 

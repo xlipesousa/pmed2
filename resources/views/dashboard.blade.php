@@ -101,8 +101,25 @@
                 </a>
             </div>
         </div>
+
+        {{-- Aviso de prazo (não ação — docs/40-decisoes/ADR-12.md). Fecha P-23. --}}
+        <div class="col-lg-2 col-6">
+            @php $qtdPrazoVencido = App\Models\Pacote::validos()->prazoRecursoVencido()->count(); @endphp
+            <div class="small-box {{ $qtdPrazoVencido > 0 ? 'bg-danger' : 'bg-secondary' }}">
+                <div class="inner">
+                    <h3>{{ $qtdPrazoVencido }}</h3>
+                    <p>Prazo de recurso vencido</p>
+                </div>
+                <div class="icon">
+                    <i class="far fa-clock"></i>
+                </div>
+                <a href="{{ route('relatorios.prazo-recurso') }}" class="small-box-footer">
+                    Ver detalhes <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
     </div>
-    
+
     <!-- Métricas financeiras -->
     <div class="row">
         <div class="col-lg-3 col-6">

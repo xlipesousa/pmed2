@@ -168,6 +168,36 @@ class Pacote extends Model
     }
 
     /**
+     * Dias corridos desde a retirada do Ofício de Glosa. Null se o ofício
+     * ainda não foi retirado. Ver docs/40-decisoes/ADR-12.md — este prazo
+     * é só aviso, nunca dispara ação automática.
+     */
+    public function diasDesdeRetiradaOficio()
+    {
+        if (!$this->data_retirada_oficio) {
+            return null;
+        }
+        // Carbon 3 retorna diffInDays() como float (não trunca mais como no
+        // Carbon 2) — (int) descarta a fração, senão a badge mostra
+        // "45.00152993125 dias" em vez de "45 dias".
+        return (int) $this->data_retirada_oficio->diffInDays(now());
+    }
+
+    /**
+     * Pacotes aguardando recurso de glosa há mais de N dias desde a
+     * retirada do Ofício de Glosa (default: config('pmed2.prazo_recurso_dias')).
+     * Base do relatório de specs/003-relatorio-prazo-glosa.
+     */
+    public function scopePrazoRecursoVencido($query, $dias = null)
+    {
+        $dias = $dias ?? config('pmed2.prazo_recurso_dias');
+
+        return $query->where('estado_glosa', 'Aguardando Recurso de Glosa')
+                    ->whereNotNull('data_retirada_oficio')
+                    ->where('data_retirada_oficio', '<', now()->subDays($dias));
+    }
+
+    /**
      * CORRIGIR: Scope para pacotes válidos
      */
     public function scopeValidos($query)
