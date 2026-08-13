@@ -244,11 +244,25 @@ node_modules
 public/*.sql
 
 # ============================================
-# ÁREA DE TRABALHO DO AGENTE / OPERACIONAL LOCAL
-# (não versionado — planejamento, docs internas e scripts ad-hoc)
+# CONHECIMENTO DO PROJETO (versionado desde 2026-08-12)
 # ============================================
-/.claude/
-/docs/
+# Antes desta data /.claude/ e /docs/ eram ignorados como "área de trabalho
+# do agente". Essa política era a causa raiz do problema de onboarding: todo
+# o conhecimento bom do projeto existia e não viajava com o repositório — um
+# clone limpo entregava só um README mandando rodar install.sh num sistema
+# que já é Docker + GitHub Actions.
+#
+#   .claude/  -> skills do projeto e de terceiros. Versionado.
+#   docs/     -> cofre Obsidian, fonte da verdade da documentação. Versionado.
+#
+# Só o que é por-máquina continua fora:
+/.claude/settings.local.json
+
+# Estado de UI do Obsidian: reescrito a cada abertura do cofre, por máquina.
+# O RESTO de docs/.obsidian/ é versionado de propósito — é o que faz o cofre
+# abrir já configurado no clone de outra pessoa.
+/docs/.obsidian/workspace*.json
+/docs/.trash/
 
 # scripts/ operacionais são locais ao ambiente onde rodam (host de prod,
 # runner), exceto backup.sh: é executado em runtime pelo container

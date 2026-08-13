@@ -1,0 +1,10 @@
+{
+  "name": "run-pmed2-driver",
+  "version": "1.0.0",
+  "description": "Playwright-core driver for the run-pmed2 agent skill (not part of the app).",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "^1.61.1"
+  }
+}

@@ -1,0 +1,323 @@
+{
+  "version": "31.1.9",
+  "pages": [
+    {
+      "id": "Ffg9ss3FEPJeA9LVKHBs",
+      "name": "Página-1",
+      "cells": [
+        {
+          "id": "1",
+          "type": "layer"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-5",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-1",
+          "target": "Fz_czA746aQ7aLdfnxad-3"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-1",
+          "type": "node",
+          "parent": "1"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-2",
+          "type": "node",
+          "parent": "Fz_czA746aQ7aLdfnxad-1",
+          "label": "Protocolo"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-7",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-3",
+          "target": "Fz_czA746aQ7aLdfnxad-6"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-3",
+          "type": "node",
+          "parent": "1"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-4",
+          "type": "node",
+          "parent": "Fz_czA746aQ7aLdfnxad-3",
+          "label": "Lisura"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-18",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-6",
+          "target": "Fz_czA746aQ7aLdfnxad-14"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-6",
+          "type": "node",
+          "parent": "1",
+          "label": "Identifica Glosa",
+          "html": "<font style=\"font-size: 17px;\">Identifica Glosa</font>"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-22",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-8",
+          "target": "Fz_czA746aQ7aLdfnxad-20"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-26",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-8",
+          "target": "Fz_czA746aQ7aLdfnxad-23"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-8",
+          "type": "node",
+          "parent": "1",
+          "label": "Glosa",
+          "html": "<font style=\"font-size: 21px;\">Glosa</font>"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-19",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-14",
+          "target": "Fz_czA746aQ7aLdfnxad-8"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-32",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-14",
+          "target": "Fz_czA746aQ7aLdfnxad-16"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-14",
+          "type": "node",
+          "parent": "1"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-15",
+          "type": "node",
+          "parent": "Fz_czA746aQ7aLdfnxad-14",
+          "label": "SIRE"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-46",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-16",
+          "target": "Fz_czA746aQ7aLdfnxad-45"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-16",
+          "type": "node",
+          "parent": "1",
+          "label": "Pagamento"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-53",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-20",
+          "target": "Fz_czA746aQ7aLdfnxad-52"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-20",
+          "type": "node",
+          "parent": "1"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-21",
+          "type": "node",
+          "parent": "Fz_czA746aQ7aLdfnxad-20",
+          "label": "Glosa"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-30",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-23",
+          "target": "Fz_czA746aQ7aLdfnxad-29"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-23",
+          "type": "node",
+          "parent": "1"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-24",
+          "type": "node",
+          "parent": "Fz_czA746aQ7aLdfnxad-23",
+          "label": "Arquivo"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-29",
+          "type": "node",
+          "parent": "1",
+          "label": "Arquivado",
+          "html": "<font style=\"font-size: 17px;\">Arquivado</font>"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-34",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-31",
+          "target": "Fz_czA746aQ7aLdfnxad-23"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-40",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-31",
+          "target": "Fz_czA746aQ7aLdfnxad-39"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-58",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-31",
+          "target": "Fz_czA746aQ7aLdfnxad-1"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-31",
+          "type": "node",
+          "parent": "1",
+          "label": "Recurso ?",
+          "html": "<font style=\"font-size: 21px;\">Recurso ?</font>"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-35",
+          "type": "node",
+          "parent": "1",
+          "label": "Sim"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-36",
+          "type": "node",
+          "parent": "1",
+          "label": "Não"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-37",
+          "type": "node",
+          "parent": "1",
+          "label": "Não"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-38",
+          "type": "node",
+          "parent": "1",
+          "label": "Sim"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-41",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-39",
+          "target": "Fz_czA746aQ7aLdfnxad-23"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-43",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-39",
+          "target": "Fz_czA746aQ7aLdfnxad-14"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-39",
+          "type": "node",
+          "parent": "1",
+          "label": "Deferido?",
+          "html": "<font style=\"font-size: 21px;\">Deferido?</font>"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-42",
+          "type": "node",
+          "parent": "1",
+          "label": "Não"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-44",
+          "type": "node",
+          "parent": "1",
+          "label": "Sim"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-48",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-45",
+          "target": "Fz_czA746aQ7aLdfnxad-16"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-50",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-45",
+          "target": "Fz_czA746aQ7aLdfnxad-23"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-45",
+          "type": "node",
+          "parent": "1",
+          "label": "Valor Pendente?",
+          "html": "<font style=\"font-size: 21px;\">Valor Pendente?</font>"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-49",
+          "type": "node",
+          "parent": "1",
+          "label": "Sim"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-51",
+          "type": "node",
+          "parent": "1",
+          "label": "Não"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-55",
+          "type": "edge",
+          "parent": "1",
+          "source": "Fz_czA746aQ7aLdfnxad-52",
+          "target": "Fz_czA746aQ7aLdfnxad-31"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-52",
+          "type": "node",
+          "parent": "1",
+          "label": "Intermediação com OCS/PSA"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-56",
+          "type": "node",
+          "parent": "1",
+          "label": "Notificação Existência de Glosa\nRetirada de Ofício de Glosa\nAguardar Recurso",
+          "html": "Notificação Existência de Glosa<br>Retirada de Ofício de Glosa<br>Aguardar Recurso"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-57",
+          "type": "node",
+          "parent": "1",
+          "label": "Aguardando Limite de Crédito"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-59",
+          "type": "node",
+          "parent": "1",
+          "label": "Aguardando recurso de Glosa"
+        },
+        {
+          "id": "Fz_czA746aQ7aLdfnxad-60",
+          "type": "node",
+          "parent": "1",
+          "label": "Localização física do pacote"
+        }
+      ]
+    }
+  ]
+}

@@ -2,161 +2,120 @@
 
 Sistema de Gestão e Controle de Faturas Hospitalares
 
-[![Laravel](https://img.shields.io/badge/Laravel-12.8.1-red?logo=laravel)](https://laravel.com)
+[![Laravel](https://img.shields.io/badge/Laravel-12-red?logo=laravel)](https://laravel.com)
 [![PHP](https://img.shields.io/badge/PHP-8.2+-blue?logo=php)](https://php.net)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
 ## 📋 Sobre o Projeto
 
-O **PMED 2.0** é um sistema completo para gestão de faturas hospitalares de convênios médicos. Gerencia todo o fluxo de pacotes de faturas desde a entrada no protocolo até o arquivamento final, incluindo processos de glosas, recursos e pagamentos.
+O **PMED 2.0** é o sistema de controle de pagamento de faturas hospitalares do **FUSEx**
+(plano de saúde do Exército Brasileiro). Gerencia o ciclo de vida de **pacotes** de faturas
+enviadas por prestadores credenciados, desde a entrada no protocolo até o arquivamento
+final, passando por auditoria, glosas, recursos e pagamento.
+
+Pense nele como contas a pagar B2B com um pipeline de auditoria no meio: nada é pago sem
+passar por conferência e possível contestação.
+
+**Documentação completa:** [`docs/Home.md`](docs/Home.md) — cofre Obsidian versionado com
+domínio, arquitetura, decisões de infraestrutura (ADRs) e runbooks operacionais. Este README
+é só a porta de entrada; para qualquer dúvida mais profunda, o cofre é a fonte da verdade.
 
 ### ✨ Principais Funcionalidades
 
-- 📦 **Gestão Completa de Pacotes** - CRUD, movimentações, glosas, anulações
-- 💰 **Mapas de Pagamento** - Criação, gestão e exportação
-- 📊 **Relatórios Gerenciais** - Status, performance, glosas, financeiro
-- 🔍 **Pesquisa Avançada** - Multicritério com exportação (PDF, Excel)
-- 📈 **Dashboards e Gráficos** - KPIs, tendências e análises
-- ⚙️ **Configurações** - OCS/PSA, tipos, usuários
-- 🔐 **Controle de Acesso** - 8 perfis diferentes com permissões granulares
+- 📦 **Gestão Completa de Pacotes** — CRUD, movimentações, glosas, anulações
+- 💰 **Mapas de Pagamento** — Criação, gestão e exportação
+- 📊 **Relatórios Gerenciais** — Status, performance, glosas, financeiro
+- 🔍 **Pesquisa Avançada** — Multicritério com exportação (PDF, Excel)
+- 📈 **Dashboards e Gráficos** — KPIs, tendências e análises
+- ⚙️ **Configurações** — OCS/PSA, tipos, usuários
+- 🔐 **Controle de Acesso** — 8 perfis de usuário, mapeados às etapas do fluxo de auditoria
+  (ver [`docs/00-projeto/Perfis e permissões.md`](docs/00-projeto/Perfis%20e%20permissões.md))
 
 ---
 
-## 🚀 Início Rápido
+## 🚀 Como rodar
 
-### Pré-requisitos
+O ambiente de execução real (homologação e produção) é **Docker + GitHub Actions** — não há
+mais instalação via script em servidor. Ver
+[`docs/20-arquitetura/Stack e ambientes.md`](docs/20-arquitetura/Stack%20e%20ambientes.md) e
+[`docs/30-operacao/Runbook de deploy.md`](docs/30-operacao/Runbook%20de%20deploy.md).
 
-- PHP 8.2+
-- MySQL 8.0+ ou MariaDB 10.6+
-- Node.js 18+
-- Composer 2.6+
-
-### Instalação Automatizada
+### Desenvolvimento local
 
 ```bash
-# Clone o repositório
 git clone https://github.com/xlipesousa/pmed2.git
 cd pmed2
 
-# Execute o script de instalação (requer sudo)
-sudo ./install.sh
-```
-
-O script `install.sh` irá:
-- ✅ Instalar todas as dependências do sistema
-- ✅ Configurar PHP, MySQL e Nginx
-- ✅ Instalar dependências do Composer e NPM
-- ✅ Configurar banco de dados
-- ✅ Executar migrations
-- ✅ **Criar usuário administrador padrão**
-- ✅ Compilar assets
-- ✅ Configurar permissões
-- ✅ Criar e habilitar serviço systemd
-
-#### 🔐 Credenciais Padrão
-
-Após a instalação, acesse o sistema com:
-
-```
-Email: admin@admin
-Senha: admin
-```
-
-> ⚠️ **IMPORTANTE**: Altere a senha padrão imediatamente após o primeiro acesso!
-
-### Instalação Manual
-
-```bash
-# 1. Clone e entre no diretório
-git clone https://github.com/xlipesousa/pmed2.git
-cd pmed2
-
-# 2. Instale dependências
 composer install
 npm install
 
-# 3. Configure o ambiente
 cp .env.example .env
 php artisan key:generate
 
-# 4. Configure o banco de dados no .env
-# DB_DATABASE=pmed2
-# DB_USERNAME=seu_usuario
-# DB_PASSWORD=sua_senha
+mkdir -p .secrets
+openssl rand -base64 24 | tr -d '/+=' | head -c 24 > .secrets/db_password
+echo "" >> .secrets/db_password
+openssl rand -base64 24 | tr -d '/+=' | head -c 24 > .secrets/db_root_password
+echo "" >> .secrets/db_root_password
+chmod 600 .secrets/db_password .secrets/db_root_password
 
-# 5. Execute migrations
-php artisan migrate
-
-# 6. Criar usuário administrador
-php artisan db:seed --class=AdminUserSeeder
-
-# 7. Compile assets
 npm run build
-
-# 8. Configure permissões
-chmod -R 775 storage bootstrap/cache
+docker compose up -d --build   # 1ª build compila extensões PHP, leva alguns minutos
+docker compose exec app php artisan migrate --force
+docker compose exec app php artisan db:seed --class=AdminUserSeeder --force
 ```
 
----
+A skill `run-pmed2` (`.claude/skills/run-pmed2/`) tem o passo a passo completo, incluindo
+troubleshooting e como dirigir a UI via navegador headless para verificação automatizada.
 
-## 📖 Documentação
-
-- 📄 **[Relatório Completo do Sistema](relatorio.md)** - Documentação técnica detalhada
-- 🔧 **[Requisitos e Dependências](requirements.txt)** - Lista completa de software necessário
-- 🛠️ **[Script de Instalação](install.sh)** - Instalação automatizada
-- 🔄 **[Script de Atualização](update.sh)** - Atualização do sistema
+> [!IMPORTANT]
+> A instalação cria um usuário administrador padrão. **A credencial não é publicada aqui** —
+> confira a saída do `db:seed` ou o seeder `AdminUserSeeder`, e troque a senha assim que
+> acessar. Nunca reutilize a credencial de desenvolvimento em homologação ou produção.
 
 ---
 
 ## 🏗️ Stack Tecnológica
 
 ### Backend
-- **Framework:** Laravel 12.8.1
-- **PHP:** 8.2+
-- **Banco de Dados:** MySQL 8.0+ / MariaDB 10.6+
-- **Template Admin:** AdminLTE 3.15
+- **Framework:** Laravel 12, PHP 8.2+
+- **Banco de Dados:** MySQL 8.0 (fora do container — ver
+  [`docs/40-decisoes/ADR-01.md`](docs/40-decisoes/ADR-01.md))
+- **Cache/Fila:** Redis
+- **Template Admin:** AdminLTE 3
 
 ### Frontend
 - **Template Engine:** Blade
-- **CSS:** Bootstrap 5.2.3 + Tailwind CSS 4.0
-- **Build Tool:** Vite 6.2.4
-- **JavaScript:** Axios 1.8.2
+- **CSS:** Bootstrap 5 + Tailwind 4 (parcial — ver dívida técnica abaixo)
+- **Build Tool:** Vite
 
 ### Bibliotecas Principais
-- `barryvdh/laravel-dompdf` - Geração de PDFs
-- `intervention/image` - Processamento de imagens
-- `doctrine/dbal` - Manipulação de schemas
-- `laravel/sanctum` - Autenticação API
-
----
-
-## 📊 Estatísticas do Sistema
-
-- **999** Pacotes gerenciados
-- **26** Usuários ativos
-- **22** Tabelas no banco de dados
-- **8** Perfis de usuário
-- **60+** Rotas implementadas
-- **8** Controllers principais
+- `barryvdh/laravel-dompdf` — geração de PDFs
+- `intervention/image` — processamento de imagens
+- `laravel/sanctum` — instalado, não usado (não há API)
 
 ---
 
 ## 🔐 Perfis de Usuário
 
+Cada estágio do fluxo de auditoria é também um perfil — não é uma hierarquia genérica de
+permissões, é a modelagem de quem trabalha em cada etapa:
+
 | Perfil | Descrição |
 |--------|-----------|
 | **Admin** | Acesso total ao sistema |
-| **Auditor** | Visualização sem modificação |
+| **Auditor** | Visualização, sem poder de alterar |
 | **Protocolo** | Entrada de pacotes |
-| **Lisura** | Análise e glosas |
+| **Lisura** | Análise de conformidade e abertura de glosas |
 | **SIRE** | Autorização de pagamentos |
-| **Glosa** | Gestão de recursos |
-| **Arquivo** | Arquivamento |
+| **Glosa** | Gestão de recursos e contestações |
+| **Arquivo** | Arquivamento do pacote processado |
 | **Pagamento** | Mapas de pagamento |
 
----
+Detalhe importante para quem for mexer em autorização: a implementação real hoje é
+majoritariamente checagens dentro dos controllers, não uma tabela de rotas auditável. Ver
+[`docs/00-projeto/Perfis e permissões.md`](docs/00-projeto/Perfis%20e%20permissões.md).
 
 ## 🔄 Fluxo Operacional
 
@@ -164,47 +123,23 @@ chmod -R 775 storage bootstrap/cache
 Protocolo → Lisura → SIRE → Glosa → Arquivo → Arquivado
 ```
 
+Simplificação didática — o SIRE é na verdade um ponto de ramificação com 7 casos. Fluxo real
+e diagrama completo em
+[`docs/10-dominio/Ciclo de vida do pacote.md`](docs/10-dominio/Ciclo%20de%20vida%20do%20pacote.md).
+
 ---
 
-## 🛠️ Comandos Úteis
+## 🧪 Testes
 
-### Desenvolvimento
 ```bash
-# Iniciar servidor de desenvolvimento
-php artisan serve
-
-# Compilar assets em modo watch
-npm run dev
-
-# Executar migrations
-php artisan migrate
-
-# Limpar caches
-php artisan cache:clear
-php artisan config:clear
-php artisan route:clear
+timeout 90 ./vendor/bin/phpunit --testdox
 ```
 
-### Produção
-```bash
-# Compilar assets para produção
-npm run build
-
-# Otimizar caches
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-
-# Modo manutenção
-php artisan down
-php artisan up
-```
-
-### Atualização
-```bash
-# Atualizar do repositório
-./update.sh
-```
+> [!WARNING]
+> A suíte de testes está sendo reconstruída. Historicamente ela reportava verde sem cobrir
+> nada de real — ver
+> [`docs/20-arquitetura/Dívida técnica.md`](docs/20-arquitetura/Dívida%20técnica.md) (item
+> 1). Não trate "os testes passam" como prova de nada até essa nota ser atualizada.
 
 ---
 
@@ -212,81 +147,45 @@ php artisan up
 
 ```
 pmed2/
-├── app/
-│   ├── Http/Controllers/    # Controllers
-│   ├── Models/              # Models Eloquent
-│   ├── Helpers/             # Helpers customizados
-│   └── Providers/           # Service Providers
-├── database/
-│   ├── migrations/          # Migrations do banco
-│   └── seeders/            # Seeders
-├── resources/
-│   ├── views/              # Views Blade
-│   ├── js/                 # JavaScript
-│   └── sass/               # Estilos
-├── routes/
-│   └── web.php            # Rotas web
-├── public/                # Assets públicos
-├── storage/               # Storage e logs
-├── install.sh            # Script de instalação
-├── update.sh             # Script de atualização
-├── requirements.txt      # Dependências
-└── relatorio.md         # Documentação completa
+├── app/                     # Controllers, Models, Helpers, Providers
+├── database/migrations/     # Migrations do banco
+├── resources/views/         # Views Blade
+├── routes/web.php          # Rotas web
+├── docker/, deploy/         # Dockerfile, composes de homolog/produção
+├── .github/workflows/       # CI e deploy (GitHub Actions)
+├── docs/                    # Cofre de documentação (fonte da verdade) — abra Home.md
+├── specs/                   # Specs de mudanças estruturais em andamento
+└── .claude/skills/          # Skills do projeto para trabalho assistido por IA
 ```
 
 ---
 
 ## 🤝 Contribuindo
 
-Contribuições são bem-vindas! Por favor:
+```bash
+git checkout -b feature/MinhaFeature
+# ... trabalho, seguindo Conventional Commits ...
+git push origin feature/MinhaFeature
+# abrir Pull Request
+```
 
-1. Faça um Fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
-3. Commit suas mudanças (`git commit -m 'feat: Adiciona MinhaFeature'`)
-4. Push para a branch (`git push origin feature/MinhaFeature`)
-5. Abra um Pull Request
+Mudanças estruturais (refatoração, nova feature de peso) seguem a convenção de specs em
+`specs/` — ver a skill `pmed2-spec`.
 
 ### Padrão de Commits
 
-Seguimos o [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` Nova funcionalidade
-- `fix:` Correção de bug
-- `docs:` Documentação
-- `style:` Formatação
-- `refactor:` Refatoração
-- `test:` Testes
-- `chore:` Manutenção
-
----
-
-## 📝 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+[Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`,
+`style:`, `refactor:`, `test:`, `chore:`.
 
 ---
 
 ## 👤 Autor
 
-**Felipe Pedrosa**
-
-- GitHub: [@xlipesousa](https://github.com/xlipesousa)
-- Email: xlipesousa@gmail.com
-
----
-
-## 🙏 Agradecimentos
-
-- Laravel Framework
-- AdminLTE
-- Comunidade Open Source
+**Felipe Pedrosa** — [@xlipesousa](https://github.com/xlipesousa)
 
 ---
 
 ## 📞 Suporte
 
-Para reportar bugs ou solicitar features, por favor abra uma [issue](https://github.com/xlipesousa/pmed2/issues).
-
----
-
-**⭐ Se este projeto foi útil para você, considere dar uma estrela!**
+Para reportar bugs ou solicitar features, abra uma
+[issue](https://github.com/xlipesousa/pmed2/issues).

@@ -1,0 +1,45 @@
+filters:
+  and:
+    - file.hasTag("pendencia")
+    - 'file.name != "Pendências"'
+
+formulas:
+  severidade_icon: 'if(severidade == "Alta", "🔴", if(severidade == "Média", "🟡", "🟢"))'
+
+properties:
+  severidade:
+    displayName: Severidade
+  status:
+    displayName: Status
+  data:
+    displayName: Data
+  formula.severidade_icon:
+    displayName: ""
+
+views:
+  - type: table
+    name: "Abertas por severidade"
+    filters:
+      and:
+        - 'status.contains("aberta")'
+    order:
+      - formula.severidade_icon
+      - file.name
+      - severidade
+      - status
+      - data
+    groupBy:
+      property: severidade
+      direction: DESC
+
+  - type: table
+    name: "Todas"
+    order:
+      - formula.severidade_icon
+      - file.name
+      - severidade
+      - status
+      - data
+    groupBy:
+      property: status
+      direction: ASC
